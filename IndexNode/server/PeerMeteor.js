@@ -34,7 +34,6 @@ Meteor.methods({
             "fileName": fileName.fileName
         });
 
-
         console.log(JSON.stringify(file));
         //Grab file part from one of the peers that has it.
         var chunks = file.chunks.map(function(currentValue, index, array) {
@@ -46,6 +45,7 @@ Meteor.methods({
                 "chunk": currentValue
             };
         });
+
         console.log(JSON.stringify(chunks));
 
         return {
@@ -61,6 +61,7 @@ Meteor.methods({
         });
 
         if (!file) {
+            //If file has not already been registered in the Index node
             var fileToInsert = {
                 "fileName": fileName,
                 "chunks": []
@@ -72,7 +73,7 @@ Meteor.methods({
 
             Files.insert(fileToInsert);
         } else {
-
+            //else add  to the file meta data that a new client has this file avalible
             for (var i = 0; i < numberOfParts; i++) {
                 file.chunks[i].push(hostNameWithPort);
             };
