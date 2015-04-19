@@ -1,0 +1,27 @@
+<head>
+  <title>DDP P2P</title>
+</head>
+
+<body>
+    <div class="container">
+  <h1>Welcome to our DDP P2P System!</h1>
+
+{{> startQuery}}
+    </div>
+</body>
+
+<template name="startQuery">
+    <div class="container">
+     
+     <form>
+  <div class="form-group">
+    <label for="exampleInputEmail1">File Name</label>
+    <input type="email" class="form-control" id="fileName" placeholder="Enter File Name">
+  </div>
+  
+  <button type="submit" id="search" class="btn btn-primary btn-lg">Download</button>
+</form>
+  <button type="button"  id="register" class="btn btn-primary btn-lg">Register File</button>
+    </div>
+
+</template>
