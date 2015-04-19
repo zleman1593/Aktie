@@ -1,17 +1,16 @@
 //File System
 var fs = Meteor.npmRequire('fs');
-//All transfered Chunks
+//Temporary Arry of all transfered Chunks
 var chunks = [];
-// //Array of peers client will try and transfer a file chunk from
-// var peers = [];
+
 
 var writeLocation = '/Users/zackleman/Desktop/ClientNode/public/'
 var readLocation = '/Users/zackleman/Desktop/ClientNode2/public/'
-
+var TESTING_INDEX_NODE = "http://localhost:5000";
+var TESTING_OWN_IP =  "http://localhost:3000";
 
 Meteor.startup(function() {
     //Maybe alert an Index node that it is online?
-
 });
 
 
@@ -19,13 +18,14 @@ Meteor.methods({
 
     registerFiletoShare: function(fileName) {
         registerFiletoShare(fileName);
-
     },
 
+    //Called when the peer node wants to get a file
     download: function(file) {
         var fileName = file;
         //Connect to an Index Node
-        var IndexNode = DDP.connect("http://localhost:5000");
+        var indexNodeIP = findIndexNode();
+        var IndexNode = DDP.connect(indexNodeIP);
 
 
         IndexNode.call('findFile', {
@@ -34,67 +34,53 @@ Meteor.methods({
             if (error) {
 
             } else {
-                console.log(JSON.stringify(result));
                 console.log("Obtained File Location Information");
                 initPeerFileTransfer(result, fileName);
             }
         });
 
     },
-
-
-
+    
+    //Called when another peer wants part of a file from this client
     getFileChunks: function(requestedChunks) {
-        var chunk = requestedChunks.chunk;
+        var chunkNumber = requestedChunks.chunk;
         var fileName = requestedChunks.fileName;
-        var temp = getChunkOfFile(fileName, chunk);
-        console.log(JSON.stringify(temp));
+        var data = getChunkOfFile(fileName, chunk);
         return {
-            "rawData": temp,
-            "chunkNumber": chunk
+            "rawData": data,
+            "chunkNumber": chunkNumber
         };
     }
-
-
-
-
 });
 
-var registerFiletoShare = function(fileName){
-            var IndexNode = DDP.connect("http://localhost:5000");
-
-
-        var hostNameWithPort = "http://localhost:3000";
-        var filepath = '/Users/zackleman/Desktop/ClientNode2/public/' + fileName;
-        var numberOfParts = splitFileCount(filepath);
-
-        IndexNode.call('registerFile', fileName, numberOfParts, hostNameWithPort, function(error, result) {
-            if (error) {
-                console.log("Registration Failed");
-            } else {
-                console.log("Registered File with Index Server");
-
-            }
-        });
+/*Will identify the most optimal IndexNode to conenct to.*/
+var findIndexNode = function() {
+    return TESTING_INDEX_NODE;
 }
 
+/*Will identify the most optimal IndexNode to conenct to.*/
+var getOwnIPAndPort = function() {
+    return TESTING_OWN_IP;
+}
 
+/*When a client node wants to indicate to the network that it is avalible to share a file*/
+var registerFiletoShare = function(fileName) {
+    var IndexNode = DDP.connect(findIndexNode());
+    var hostNameWithPort = getOwnIPAndPort();
+    var filepath = '/Users/zackleman/Desktop/ClientNode2/public/' + fileName;
+    var numberOfParts = splitFileCount(filepath);
 
-var getWholeFile = function(fileName) {
-    console.log("Returning Whole File");
-    var base64Image = Async.runSync(function(done) {
-        fs.readFile('/Users/zackleman/Desktop/ClientNode2/public/' + fileName, function(err, original_data) {
-            var encodedData = original_data.toString('base64')
-            done(null, encodedData);
-            //console.log("First: " + encodedData);
+    IndexNode.call('registerFile', fileName, numberOfParts, hostNameWithPort, function(error, result) {
+        if (error) {
+            console.log("Registration Failed");
+        } else {
+            console.log("Registered File with Index Server");
 
-        });
+        }
     });
-
-    return base64Image;
 }
 
-
+/*Returns a specific chunk of the requested file*/
 var getChunkOfFile = function(fileName, chunk) {
     console.log("Returning chunk File");
     var base64File = Async.runSync(function(done) {
@@ -121,7 +107,7 @@ var getChunkOfFile = function(fileName, chunk) {
     };
 }
 
-
+/*Merges chunks of file once all chunks have been downloaded to local client node*/
 var concatFile = function(chunkList) {
     //Make sure binary data string chunks are appeneded in the correct order
     chunkList.sort(function(a, b) {
@@ -140,21 +126,24 @@ var concatFile = function(chunkList) {
     return data;
 }
 
+/*Write the concatednated file to the local file system*/
 var writeConcatedFile = function(base64String, fileName) {
     var decodedImage = new Buffer(base64String, 'base64');
     fs.writeFile(writeLocation + fileName, decodedImage, function(err) {});
 
-resetForNextFileTransfer(fileName);
+    resetForNextFileTransfer(fileName);
 
 }
 
-var resetForNextFileTransfer = function(fileName){
+var resetForNextFileTransfer = function(fileName) {
+    //Reset chunks buffer
     chunks = [];
+    //Now that the client node hat the whole file, it should share it with other peers
     registerFiletoShare(fileName);
-
 }
-var initPeerFileTransfer = function(chunkHolder, fileName) {
 
+/*Get all chunks from avalible peers*/
+var initPeerFileTransfer = function(chunkHolder, fileName) {
     console.log("Start Calling Peers for file transfer");
 
     for (var chunk = 0; chunk < chunkHolder.chunks.length; chunk++) {
@@ -169,7 +158,6 @@ var initPeerFileTransfer = function(chunkHolder, fileName) {
             } else {
                 console.log("Retrieved peer: " + chunk + " info");
                 chunks.push(result);
-
                 if (chunks.length == chunkHolder.chunks.length) {
                     var concatedFile = concatFile(chunks);
                     writeConcatedFile(concatedFile, fileName);
@@ -180,8 +168,24 @@ var initPeerFileTransfer = function(chunkHolder, fileName) {
 
 };
 
-
+/*Temporary method: will need to calcuate hwo many parts a given fiel should be split into*/
 var splitFileCount = function(filePath) {
 
     return 10;
 }
+
+
+// var getWholeFile = function(fileName) {
+//     console.log("Returning Whole File");
+//     var base64Image = Async.runSync(function(done) {
+//         fs.readFile('/Users/zackleman/Desktop/ClientNode2/public/' + fileName, function(err, original_data) {
+//             var encodedData = original_data.toString('base64')
+//             done(null, encodedData);
+//             //console.log("First: " + encodedData);
+
+//         });
+//     });
+
+//     return base64Image;
+// }
+
