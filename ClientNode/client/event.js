@@ -13,7 +13,8 @@ Template.startQuery.events({
         event.preventDefault();
 
         //var fileName = $('#fileName').val();
-        var fileName = "news.pdf";
+        //var fileName = "news.pdf";
+        var fileName = "demo.png";
     //     if (Session.get("item")) {
     //     		fileName = "pdf.pdf";
     //             //fileName = "demo.png";

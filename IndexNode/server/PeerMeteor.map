@@ -1,4 +1,5 @@
-
+$traceurRuntime.ModuleStore.getAnonymousModule(function() {
+  "use strict";
   var fs = Meteor.npmRequire("fs");
   Meteor.startup(function() {
     if (Files.find().count() < 2) {
@@ -46,11 +47,14 @@
         }
         Files.insert(fileToInsert);
       } else {
-        for (var i$__0 = 0; i$__0 < file.chunks.length; i$__0++) {
+        for (var i$__0 = 0; i$__0 < numberOfParts; i$__0++) {
           file.chunks[i$__0].push(hostNameWithPort);
         }
         Files.update(file._id, file);
       }
     }
   });
+  return {};
+});
 
+//# sourceMappingURL=PeerMeteor.map

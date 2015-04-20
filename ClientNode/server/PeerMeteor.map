@@ -1,7 +1,8 @@
-
+$traceurRuntime.ModuleStore.getAnonymousModule(function() {
+  "use strict";
   var fs = Meteor.npmRequire("fs");
   var chunks = [];
-  var writeLocation = "/Users/zackleman/Desktop/DDP-P2P/ClientNode/public/";
+  var writeLocation = "/Users/zackleman/Desktop/::DDP-P2P/ClientNode/public/";
   var readLocation = "/Users/zackleman/Desktop/ClientNode2/public/";
   var TESTING_INDEX_NODE = "http://localhost:5000";
   var TESTING_OWN_IP = "http://localhost:3000";
@@ -123,4 +124,7 @@
   function splitFileCount(filePath) {
     return 10;
   }
+  return {};
+});
 
+//# sourceMappingURL=PeerMeteor.map
