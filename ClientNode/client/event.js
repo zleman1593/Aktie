@@ -14,7 +14,7 @@ Template.startQuery.events({
 
         //var fileName = $('#fileName').val();
         //var fileName = "news.pdf";
-        var fileName = "demo.png";
+        var fileName = "setup.zip";
     //     if (Session.get("item")) {
     //     		fileName = "pdf.pdf";
     //             //fileName = "demo.png";
@@ -41,7 +41,7 @@ Template.startQuery.events({
         event.preventDefault();
 
 
-        Meteor.call('registerFiletoShare',"news.pdf", function(error, result) {
+        Meteor.call('registerFiletoShare',"setup.zip", function(error, result) {
                 if (error) {
 
                 } else {

@@ -14,3 +14,4 @@ npm-container
 cfs:standard-packages
 cfs:filesystem
 twbs:bootstrap
+grigio:babel

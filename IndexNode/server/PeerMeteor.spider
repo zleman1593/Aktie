@@ -1,10 +1,11 @@
 use console;
 
 var fs = ::Meteor.npmRequire('fs');
+var os = ::Meteor.npmRequire('os');
 
 ::Meteor.startup(fn() {
     // Code to run once the first time the server is ever started. Creates a demo file reference
-    if (::Files.find().count() < 2) {
+    if (::Files.find().count() < 5) {
 
         var demoFile = {
             "fileName": "demo.png",
@@ -25,11 +26,25 @@ var fs = ::Meteor.npmRequire('fs');
         ::Files.insert(demoFile2);
     }
 
+
+var interfaces = os.networkInterfaces();
+var addresses = [];
+for  k in interfaces {
+    for  k2 in interfaces[k] {
+        var address = interfaces[k][k2];
+        if address.family == 'IPv4' && !address.internal {
+            addresses.push(address.address);
+        }
+    }
+}
+
+console.log(addresses);
 });
 
 
 ::Meteor.methods({
     findFile: fn(fileName) {
+         this.unblock;
         console.log("Finding the File Part Locations for: \(fileName.fileName)" );
 
         var file = ::Files.findOne({
@@ -58,6 +73,7 @@ var fs = ::Meteor.npmRequire('fs');
 
 
     registerFile: fn(fileName, numberOfParts, hostNameWithPort) {
+         this.unblock;
         var file = ::Files.findOne({
             "fileName": fileName
         });

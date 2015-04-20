@@ -2,28 +2,33 @@ use :node;
 
 //File System
 var fs = ::Meteor.npmRequire('fs');
+//OS utilities
+var os = ::Meteor.npmRequire('os');
 //Temporary Arry of all transfered Chunks
 var chunks = [];
 
 
 var writeLocation = '/Users/zackleman/Desktop/DDP-P2P/ClientNode/public/';
 var readLocation = '/Users/zackleman/Desktop/ClientNode2/public/';
-var TESTING_INDEX_NODE = "http://localhost:5000";
-var TESTING_OWN_IP =  "http://localhost:3000";
+var TESTING_INDEX_NODES = ["http://localhost:5000","http://localhost:6000"];
+
 
 ::Meteor.startup(fn() {
     //Maybe alert an Index node that it is online?
+    ::getOwnIPAndPort();
 });
 
 
 ::Meteor.methods({
 
     registerFiletoShare: fn(fileName) {
+         this.unblock;
         ::registerFiletoShare(fileName);
     },
 
     //Called when the peer node wants to get a file
     download: fn(file) {
+         this.unblock;
         var fileName = file;
         //Connect to an Index Node
         var indexNodeIP = ::findIndexNode();
@@ -45,6 +50,7 @@ var TESTING_OWN_IP =  "http://localhost:3000";
 
     //Called when another peer wants part of a file from this client
     getFileChunks: fn(requestedChunks) {
+         this.unblock;
         var chunkNumber = requestedChunks.chunk;
         var fileName = ::requestedChunks.fileName;
         var data = ::getChunkOfFile(fileName, chunkNumber);
@@ -57,14 +63,27 @@ var TESTING_OWN_IP =  "http://localhost:3000";
 
 /*Will identify the most optimal IndexNode to connenct to.*/
  fn findIndexNode() {
-
-return TESTING_INDEX_NODE;
+    return TESTING_INDEX_NODES[0];
  } 
 
 
 
  fn getOwnIPAndPort() {
- return TESTING_OWN_IP;
+    var interfaces = os.networkInterfaces();
+    var addresses = [];
+    for  k in interfaces {
+        for  k2 in interfaces[k] {
+            var address = interfaces[k][k2];
+            if address.family == 'IPv4' && !address.internal {
+                addresses.push(address.address);
+
+            }
+        }
+    }
+
+    console.log("\(addresses[0]):\(process.env.PORT)");
+    return "\(addresses[0]):\(process.env.PORT)";
+
   } 
 
 
@@ -72,7 +91,7 @@ return TESTING_INDEX_NODE;
 fn registerFiletoShare(fileName) {
     var IndexNode = ::DDP.connect(findIndexNode());
     var hostNameWithPort = getOwnIPAndPort();
-    var filepath = '/Users/zackleman/Desktop/ClientNode2/public/ \(fileName)';
+    var filepath = '\(readLocation)\(fileName)';
     var numberOfParts = ::splitFileCount(filepath);
 
     IndexNode.call('registerFile', fileName, numberOfParts, hostNameWithPort, fn(error, result) {
@@ -89,7 +108,7 @@ fn registerFiletoShare(fileName) {
  fn getChunkOfFile(fileName, chunk) {
     console.log("Returning chunk File");
     var base64File = ::Async.runSync(fn(done) {
-        fs.readFile('/Users/zackleman/Desktop/ClientNode2/public/' + fileName, fn(err, original_data) {
+        fs.readFile('\(readLocation)\(fileName)', fn(err, original_data) {
             var encodedData = original_data.toString('base64');
             var start;
             var amount;
