@@ -11,9 +11,12 @@ var chunks = [];
 var writeLocation = '/Users/zackleman/Desktop/DDP-P2P/ClientNode/public/';
 var readLocation = '/Users/zackleman/Desktop/ClientNode2/public/';
 var TESTING_INDEX_NODES = ["http://localhost:5000","http://localhost:6000"];
+var ONE_MIB = 1048576; // // 1 MiB
+var CHUNK_SIZE = ONE_MIB;
 
 
 ::Meteor.startup(fn() {
+
     //Maybe alert an Index node that it is online?
     ::getOwnIPAndPort();
 });
@@ -54,6 +57,8 @@ var TESTING_INDEX_NODES = ["http://localhost:5000","http://localhost:6000"];
         var chunkNumber = requestedChunks.chunk;
         var fileName = ::requestedChunks.fileName;
         var data = ::getChunkOfFile(fileName, chunkNumber);
+        console.log("Last step before returning data");
+        //console.log(data);
         return {
             "rawData": data,
             "chunkNumber": chunkNumber
@@ -107,24 +112,11 @@ fn registerFiletoShare(fileName) {
 /*Returns a specific chunk of the requested file*/
  fn getChunkOfFile(fileName, chunk) {
     console.log("Returning chunk File");
-    var base64File = ::Async.runSync(fn(done) {
-        fs.readFile('\(readLocation)\(fileName)', fn(err, original_data) {
-            var encodedData = original_data.toString('base64');
-            var start;
-            var amount;
-            if chunk == 0 {
-                start = 0;
-                amount = encodedData.length;
-            } else {
-                start = encodedData.length;
-                amount = encodedData.length / chunks.length;
-            }
-
-            var chunkEncodedData = encodedData.substring(start, amount);
-            done(null, chunkEncodedData);
-        });
-    });
-
+    var base64File  = ::fileSplit("\(readLocation)\(fileName)",chunk);
+    if  base64File.result == -1{
+     base64File = ::getWholeFile("\(readLocation)\(fileName)",chunk);
+ }
+      //  console.log(base64File);
     return {
         "base64File": base64File,
         "part": chunk
@@ -133,6 +125,7 @@ fn registerFiletoShare(fileName) {
 
 /*Merges chunks of file once all chunks have been downloaded to local client node*/
  fn concatFile(chunkList) {
+
     //Make sure binary data string chunks are appeneded in the correct order
     chunkList.sort(fn(a, b) {
         if a.chunkNumber < b.chunkNumber {
@@ -142,8 +135,11 @@ fn registerFiletoShare(fileName) {
         }
 
     });
+//console.log(chunkList);
+//console.log(JSON.stringify(chunkList));
 
     var data = chunkList[0].rawData.base64File.result;
+
     for var i = 1; i < chunkList.length; i++ {
         data += chunkList[i].rawData.base64File.result;
     }
@@ -192,24 +188,100 @@ fn registerFiletoShare(fileName) {
 
 }
 
-/*Temporary method: will need to calcuate hwo many parts a given file should be split into*/
+/*Calcuate hwo many parts a given file should be split into*/
  fn splitFileCount(filePath) {
+    var fileName  = filePath;
 
-    return 10;
+   var parts =  ::Async.runSync(fn(done)  {
+
+            fs.stat(filePath, fn (err, stats) {
+                      if err? {
+                        console.error(err);
+                        done(null,0);
+                      }
+
+                      if stats.isDirectory() {
+                        console.error(fileName + ' is a directory, but must be a file');
+                          done(null,0);
+                      }
+
+                      if stats.size < CHUNK_SIZE {
+                        console.log(fileName + ' is less than ' + CHUNK_SIZE / ONE_MIB + ' MiB, won\'t be split');
+                        done(null,1);
+                      }
+
+                      var parts = Math.ceil(stats.size / CHUNK_SIZE);
+                      console.log("\(filePath) will be split into \(parts)");
+                      done(null,parts);
+                });
+    });
+     //console.log(parts.result);
+     return parts.result;
 }
 
 
-// var getWholeFile = fn(fileName) {
-//     console.log("Returning Whole File");
-//     var base64Image = Async.runSync(fn(done) {
-//         fs.readFile('/Users/zackleman/Desktop/ClientNode2/public/' + fileName, fn(err, original_data) {
-//             var encodedData = original_data.toString('base64')
-//             done(null, encodedData);
-//             //console.log("First: " + encodedData);
+fn fileSplit(file,chunkNumber){
+    var fileName  = file;
+    var fileChunk =  ::Async.runSync(fn(done)  {
+           fs.stat(file, fn (err, stats) {
+                     if err? {
+                       console.error(err);
+                       return done(null,"");
+                     }
 
-//         });
-//     });
+                     if stats.isDirectory() {
+                       console.error(file + ' is a directory, but must be a file');
+                         return done(null,"");
+                     }
 
-//     return base64Image;
-// }
+                     if stats.size < CHUNK_SIZE {
+                       console.log(file + ' is less than ' + CHUNK_SIZE / ONE_MIB + ' MiB, won\'t be split');
+                       return done(null,-1);
+                     }
 
+                    done(null,1);
+               });
+ });
+    if fileChunk.result == 1 {
+
+                        var readStream;
+                       var data = '';
+                       var start = CHUNK_SIZE * chunkNumber;
+                       var end = start + CHUNK_SIZE - 1;
+                     
+                       readStream = fs.createReadStream(file, { flags: 'r', encoding: 'base64', start: start, end: end });
+
+                       readStream.on('data', fn(chunk) {
+                           data+=chunk;
+
+                           });
+                       fileChunk = ::Async.runSync(fn(done)  {
+                      
+                       readStream.on('end', fn() {
+
+                           done(null,data);
+                           });
+                 
+                  });
+                           
+                    }
+
+
+        return fileChunk;//{"result":fileChunk};
+}
+
+
+fn getWholeFile(fileName) {
+    console.log("Returning Whole File As one Chunk");
+    var encodedData = ::Async.runSync(fn (done) {
+            fs.readFile(fileName, fn(err, original_data) {
+             if !err? {
+                      done(null,original_data.toString("base64"));
+              } else {
+                     console.log("error");
+                    }
+             });
+    });
+
+return encodedData;
+}

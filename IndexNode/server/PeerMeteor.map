@@ -3,47 +3,6 @@
     let fs = Meteor.npmRequire("fs");
     let os = Meteor.npmRequire("os");
     Meteor.startup(function () {
-        if (Files.find().count() < 5) {
-            let demoFile = {
-                "fileName": "demo.png",
-                "chunks": [
-                    [
-                        "http://localhost:3500",
-                        "http://localhost:3500"
-                    ],
-                    [
-                        "http://localhost:4500",
-                        "http://localhost:4500"
-                    ]
-                ]
-            };
-            Files.insert(demoFile);
-            let demoFile2 = {
-                "fileName": "favicon.ico",
-                "chunks": [
-                    [
-                        "http://localhost:3500",
-                        "http://localhost:3500"
-                    ],
-                    [
-                        "http://localhost:4500",
-                        "http://localhost:4500"
-                    ]
-                ]
-            };
-            Files.insert(demoFile2);
-        }
-        let interfaces = os.networkInterfaces();
-        let addresses = [];
-        for (let k of interfaces) {
-            for (let k2 of interfaces[k]) {
-                let address = interfaces[k][k2];
-                if (!!(address.family === "IPv4") && !address.internal) {
-                    addresses.push(address.address);
-                }
-            }
-        }
-        console.log(addresses);
     });
     Meteor.methods({
         findFile: function (fileName) {
@@ -67,6 +26,9 @@
             };
         },
         registerFile: function (fileName, numberOfParts, hostNameWithPort) {
+            console.log(fileName);
+            console.log(numberOfParts);
+            console.log(hostNameWithPort);
             this.unblock;
             let file = Files.findOne({ "fileName": fileName });
             if (!(typeof file !== "undefined" && file !== null)) {
@@ -74,6 +36,8 @@
                     "fileName": fileName,
                     "chunks": []
                 };
+                console.log("registering new File with " + numberOfParts + " parts");
+                console.log("registering new File with " + JSON.stringify(numberOfParts) + " parts");
                 for (let i = 0; i < numberOfParts; i++) {
                     fileToInsert.chunks.push([hostNameWithPort]);
                 }

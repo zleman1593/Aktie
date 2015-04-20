@@ -5,7 +5,12 @@
     let chunks = [];
     let writeLocation = "/Users/zackleman/Desktop/DDP-P2P/ClientNode/public/";
     let readLocation = "/Users/zackleman/Desktop/ClientNode2/public/";
-    let TESTING_INDEX_NODE = "http://localhost:5000";
+    let TESTING_INDEX_NODES = [
+        "http://localhost:5000",
+        "http://localhost:6000"
+    ];
+    let ONE_MIB = 1048576;
+    let CHUNK_SIZE = ONE_MIB;
     Meteor.startup(function () {
         getOwnIPAndPort();
     });
@@ -32,6 +37,7 @@
             let chunkNumber = requestedChunks.chunk;
             let fileName = requestedChunks.fileName;
             let data = getChunkOfFile(fileName, chunkNumber);
+            console.log("Last step before returning data");
             return {
                 "rawData": data,
                 "chunkNumber": chunkNumber
@@ -39,7 +45,7 @@
         }
     });
     function findIndexNode() {
-        return TESTING_INDEX_NODE;
+        return TESTING_INDEX_NODES[0];
     }
     function getOwnIPAndPort() {
         let interfaces = os.networkInterfaces();
@@ -58,7 +64,7 @@
     function registerFiletoShare(fileName) {
         let IndexNode = DDP.connect(findIndexNode());
         let hostNameWithPort = getOwnIPAndPort();
-        let filepath = "/Users/zackleman/Desktop/ClientNode2/public/ " + fileName;
+        let filepath = readLocation + fileName;
         let numberOfParts = splitFileCount(filepath);
         IndexNode.call("registerFile", fileName, numberOfParts, hostNameWithPort, function (error, result) {
             if (error) {
@@ -70,22 +76,10 @@
     }
     function getChunkOfFile(fileName, chunk) {
         console.log("Returning chunk File");
-        let base64File = Async.runSync(function (done) {
-            fs.readFile("/Users/zackleman/Desktop/ClientNode2/public/" + fileName, function (err, original_data) {
-                let encodedData = original_data.toString("base64");
-                let start;
-                let amount;
-                if (chunk === 0) {
-                    start = 0;
-                    amount = encodedData.length;
-                } else {
-                    start = encodedData.length;
-                    amount = encodedData.length / chunks.length;
-                }
-                let chunkEncodedData = encodedData.substring(start, amount);
-                done(null, chunkEncodedData);
-            });
-        });
+        let base64File = fileSplit(readLocation + fileName, chunk);
+        if (base64File.result === -1) {
+            base64File = getWholeFile(readLocation + fileName, chunk);
+        }
         return {
             "base64File": base64File,
             "part": chunk
@@ -137,7 +131,81 @@
         }
     }
     function splitFileCount(filePath) {
-        return 10;
+        let fileName = filePath;
+        let parts = Async.runSync(function (done) {
+            fs.stat(filePath, function (err, stats) {
+                if (typeof err !== "undefined" && err !== null) {
+                    console.error(err);
+                    done(null, 0);
+                }
+                if (stats.isDirectory()) {
+                    console.error(fileName + " is a directory, but must be a file");
+                    done(null, 0);
+                }
+                if (stats.size < CHUNK_SIZE) {
+                    console.log(fileName + " is less than " + CHUNK_SIZE / ONE_MIB + " MiB, won't be split");
+                    done(null, 1);
+                }
+                let parts = Math.ceil(stats.size / CHUNK_SIZE);
+                console.log(filePath + " will be split into " + parts);
+                done(null, parts);
+            });
+        });
+        return parts.result;
+    }
+    function fileSplit(file, chunkNumber) {
+        let fileName = file;
+        let fileChunk = Async.runSync(function (done) {
+            fs.stat(file, function (err, stats) {
+                if (typeof err !== "undefined" && err !== null) {
+                    console.error(err);
+                    return done(null, "");
+                }
+                if (stats.isDirectory()) {
+                    console.error(file + " is a directory, but must be a file");
+                    return done(null, "");
+                }
+                if (stats.size < CHUNK_SIZE) {
+                    console.log(file + " is less than " + CHUNK_SIZE / ONE_MIB + " MiB, won't be split");
+                    return done(null, -1);
+                }
+                done(null, 1);
+            });
+        });
+        if (fileChunk.result === 1) {
+            let readStream;
+            let data = "";
+            let start = CHUNK_SIZE * chunkNumber;
+            let end = start + CHUNK_SIZE - 1;
+            readStream = fs.createReadStream(file, {
+                flags: "r",
+                encoding: "base64",
+                start: start,
+                end: end
+            });
+            readStream.on("data", function (chunk) {
+                data += chunk;
+            });
+            fileChunk = Async.runSync(function (done) {
+                readStream.on("end", function () {
+                    done(null, data);
+                });
+            });
+        }
+        return fileChunk;
+    }
+    function getWholeFile(fileName) {
+        console.log("Returning Whole File As one Chunk");
+        let encodedData = Async.runSync(function (done) {
+            fs.readFile(fileName, function (err, original_data) {
+                if (!(typeof err !== "undefined" && err !== null)) {
+                    done(null, original_data.toString("base64"));
+                } else {
+                    console.log("error");
+                }
+            });
+        });
+        return encodedData;
     }
 }());
 

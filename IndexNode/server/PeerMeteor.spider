@@ -1,11 +1,11 @@
-use console;
+use :node;
 
 var fs = ::Meteor.npmRequire('fs');
 var os = ::Meteor.npmRequire('os');
 
 ::Meteor.startup(fn() {
     // Code to run once the first time the server is ever started. Creates a demo file reference
-    if (::Files.find().count() < 5) {
+    /*if (::Files.find().count() < 5) {
 
         var demoFile = {
             "fileName": "demo.png",
@@ -38,7 +38,7 @@ for  k in interfaces {
     }
 }
 
-console.log(addresses);
+console.log(addresses);*/
 });
 
 
@@ -84,6 +84,7 @@ console.log(addresses);
                 "fileName": fileName,
                 "chunks": []
             };
+             console.log("registering new File with \(numberOfParts) parts");
 
             for var i = 0; i < numberOfParts; i++ {
                 fileToInsert.chunks.push([hostNameWithPort]);
