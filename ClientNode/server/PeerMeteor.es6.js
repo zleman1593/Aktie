@@ -6,8 +6,8 @@
     let writeLocation = "/Users/zackleman/Desktop/DDP-P2P/ClientNode/public/";
     let readLocation = "/Users/zackleman/Desktop/ClientNode2/public/";
     let TESTING_INDEX_NODES = [
-        "http://localhost:5000",
-        "http://localhost:6000"
+        "http://IndexNode.meteor.com",
+        "http://localhost:5000"
     ];
     let ONE_MIB = 1048576;
     let CHUNK_SIZE = ONE_MIB;

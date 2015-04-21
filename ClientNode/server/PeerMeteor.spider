@@ -10,9 +10,9 @@ var chunks = [];
 
 var writeLocation = '/Users/zackleman/Desktop/DDP-P2P/ClientNode/public/';
 var readLocation = '/Users/zackleman/Desktop/ClientNode2/public/';
-var TESTING_INDEX_NODES = ["http://localhost:5000","http://localhost:6000"];
+var TESTING_INDEX_NODES = ["http://IndexNode.meteor.com",,"http://localhost:5000"];
 var ONE_MIB = 1048576; // // 1 MiB
-var CHUNK_SIZE = ONE_MIB;
+var CHUNK_SIZE = ONE_MIB * 5;
 
 
 ::Meteor.startup(fn() {
@@ -57,8 +57,6 @@ var CHUNK_SIZE = ONE_MIB;
         var chunkNumber = requestedChunks.chunk;
         var fileName = ::requestedChunks.fileName;
         var data = ::getChunkOfFile(fileName, chunkNumber);
-        console.log("Last step before returning data");
-        //console.log(data);
         return {
             "rawData": data,
             "chunkNumber": chunkNumber
