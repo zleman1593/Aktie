@@ -1,4 +1,4 @@
-Session.setDefault("item", true);
+
 
 Template.startQuery.helpers({
     activeLabel: function() {
@@ -12,17 +12,10 @@ Template.startQuery.events({
     'click #search': function(event) {
         event.preventDefault();
 
-        //var fileName = $('#fileName').val();
-        //var fileName = "news.pdf";
-        var fileName = "setup.zip";
-    //     if (Session.get("item")) {
-    //     		fileName = "pdf.pdf";
-    //             //fileName = "demo.png";
-    //         Session.set("item", false);
-    //     } else {
-		  // fileName = "favicon.ico";
+        var fileName = $('#fileName').val();
       
-    //     }
+        //var fileName = "setup.zip";
+  
 
         Meteor.call('download',
             fileName,
@@ -39,11 +32,10 @@ Template.startQuery.events({
 
     'click #register': function(event) {
         event.preventDefault();
-
-
-        Meteor.call('registerFiletoShare',"setup.zip", function(error, result) {
+  var fileName = $('#fileName').val();
+        Meteor.call('registerFiletoShare',fileName, function(error, result) {
                 if (error) {
-
+                alert(error.message);
                 } else {
 
                 }

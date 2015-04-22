@@ -17,7 +17,10 @@
     Meteor.methods({
         registerFiletoShare: function (fileName) {
             this.unblock;
-            registerFiletoShare(fileName);
+            let error = registerFiletoShare(fileName);
+            if (typeof error !== "undefined" && error !== null) {
+                throw new Meteor.Error(500, "Error 500: Not found", "the file is not found");
+            }
         },
         download: function (file) {
             this.unblock;
@@ -49,8 +52,8 @@
     function getOwnIPAndPort() {
         let interfaces = os.networkInterfaces();
         let addresses = [];
-        for (let k of interfaces) {
-            for (let k2 of interfaces[k]) {
+        for (let k in interfaces) {
+            for (let k2 in interfaces[k]) {
                 let address = interfaces[k][k2];
                 if (!!(address.family === "IPv4") && !address.internal) {
                     addresses.push(address.address);
@@ -65,13 +68,17 @@
         let hostNameWithPort = getOwnIPAndPort();
         let filepath = readLocation + fileName;
         let numberOfParts = splitFileCount(filepath);
-        IndexNode.call("registerFile", fileName, numberOfParts, hostNameWithPort, function (error, result) {
+        if (typeof numberOfParts.error !== "undefined" && numberOfParts.error !== null) {
+            return numberOfParts.error;
+        }
+        IndexNode.call("registerFile", fileName, numberOfParts.result, hostNameWithPort, function (error, result) {
             if (error) {
                 console.log("Registration Failed");
             } else {
                 console.log("Registered File with Index Server");
             }
         });
+        return null;
     }
     function getChunkOfFile(fileName, chunk) {
         console.log("Returning chunk File");
@@ -135,7 +142,7 @@
             fs.stat(filePath, function (err, stats) {
                 if (typeof err !== "undefined" && err !== null) {
                     console.error(err);
-                    done(null, 0);
+                    done(err, null);
                 }
                 if (stats.isDirectory()) {
                     console.error(fileName + " is a directory, but must be a file");
@@ -150,7 +157,7 @@
                 done(null, parts);
             });
         });
-        return parts.result;
+        return parts;
     }
     function fileSplit(file, chunkNumber) {
         let fileName = file;
@@ -160,9 +167,9 @@
                     console.error(err);
                     return done(null, "");
                 }
-                if (stats.isDirectory()) {
+                if (typeof stats !== "undefined" && stats !== null ? stats.isDirectory() : void 0) {
                     console.error(file + " is a directory, but must be a file");
-                    return done(null, "");
+                    return done({ "reason": file + " is a directory, but must be a file" }, null);
                 }
                 if (stats.size < CHUNK_SIZE) {
                     console.log(file + " is less than " + CHUNK_SIZE / ONE_MIB + " MiB, won't be split");
