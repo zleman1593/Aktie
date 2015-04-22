@@ -13,3 +13,5 @@ meteorhacks:npm
 npm-container
 twbs:bootstrap
 grigio:babel
+iron:router
+coffeescript

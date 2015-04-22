@@ -46,11 +46,12 @@ var CHUNK_SIZE = ONE_MIB * 5;
             "fileName": fileName
         }, fn(error, result) {
             if error? {
-
+                console.log(" Error Obtaing File Information From Index");
+                IndexNode.disconnect();
             } else {
                 console.log("Obtained File Location Information");
                 ::initPeerFileTransfer(result, fileName);
-
+                IndexNode.disconnect();
             }
         });
 
@@ -97,12 +98,12 @@ var CHUNK_SIZE = ONE_MIB * 5;
 
 /*When a client node wants to indicate to the network that it is avalible to share a file*/
 fn registerFiletoShare(fileName) {
+    
+    var numberOfParts = ::splitFileCount(filepath);
+    if numberOfParts.error? { return numberOfParts.error;}
     var IndexNode = ::DDP.connect(findIndexNode());
     var hostNameWithPort = getOwnIPAndPort();
     var filepath = '\(readLocation)\(fileName)';
-    var numberOfParts = ::splitFileCount(filepath);
-    if numberOfParts.error? { return numberOfParts.error;}
-
     IndexNode.call('registerFile', fileName, numberOfParts.result, hostNameWithPort, fn(error, result) {
         if (error) {
             console.log("Registration Failed");

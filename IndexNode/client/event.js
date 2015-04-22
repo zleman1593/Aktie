@@ -37,6 +37,15 @@ Template.file.helpers({
 
 });
 
+Template.FileDetails.helpers({
+    chunkCount: function() {
+        return this.chunks.length;
+    },
+    
+
+
+});
+
 
 Template.file.events({
 

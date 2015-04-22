@@ -1,5 +1,3 @@
-
-
 Template.startQuery.helpers({
     activeLabel: function() {
 
@@ -13,9 +11,6 @@ Template.startQuery.events({
         event.preventDefault();
 
         var fileName = $('#fileName').val();
-      
-        //var fileName = "setup.zip";
-  
 
         Meteor.call('download',
             fileName,
@@ -32,14 +27,14 @@ Template.startQuery.events({
 
     'click #register': function(event) {
         event.preventDefault();
-  var fileName = $('#fileName').val();
-        Meteor.call('registerFiletoShare',fileName, function(error, result) {
-                if (error) {
+        var fileName = $('#fileName').val();
+        Meteor.call('registerFiletoShare', fileName, function(error, result) {
+            if (error) {
                 alert(error.message);
-                } else {
-
-                }
-            });
+            } else {
+                alert("Registration Successful!!");
+            }
+        });
 
     },
 
