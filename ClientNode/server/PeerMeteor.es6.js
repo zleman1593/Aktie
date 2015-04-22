@@ -3,14 +3,14 @@
     let fs = Meteor.npmRequire("fs");
     let os = Meteor.npmRequire("os");
     let chunks = [];
-    let writeLocation = "/Users/zackleman/Desktop/DDP-P2P/ClientNode/public/";
-    let readLocation = "/Users/zackleman/Desktop/ClientNode2/public/";
+    let writeLocation = "../web.browser/app/";
+    let readLocation = writeLocation;
     let TESTING_INDEX_NODES = [
         "http://IndexNode.meteor.com",
         "http://localhost:5000"
     ];
     let ONE_MIB = 1048576;
-    let CHUNK_SIZE = ONE_MIB;
+    let CHUNK_SIZE = ONE_MIB * 5;
     Meteor.startup(function () {
         getOwnIPAndPort();
     });
@@ -37,7 +37,6 @@
             let chunkNumber = requestedChunks.chunk;
             let fileName = requestedChunks.fileName;
             let data = getChunkOfFile(fileName, chunkNumber);
-            console.log("Last step before returning data");
             return {
                 "rawData": data,
                 "chunkNumber": chunkNumber
@@ -50,8 +49,8 @@
     function getOwnIPAndPort() {
         let interfaces = os.networkInterfaces();
         let addresses = [];
-        for (let k in interfaces) {
-            for (let k2 in interfaces[k]) {
+        for (let k of interfaces) {
+            for (let k2 of interfaces[k]) {
                 let address = interfaces[k][k2];
                 if (!!(address.family === "IPv4") && !address.internal) {
                     addresses.push(address.address);

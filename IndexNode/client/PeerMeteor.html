@@ -1,0 +1,34 @@
+<head>
+    <title>DDP P2P</title>
+</head>
+
+<body>
+    <div class="container">
+        <h1>Welcome to our DDP P2P System!</h1> {{> displayFiles}}
+    </div>
+</body>
+<template name="displayFiles">
+    <div class="container">
+        {{#if anyFiles}}
+        <p class="lead" id="cart"><strong>Indexed Files</strong></p>
+        <ul class="list-group">
+            {{#each files}} {{> file}} {{/each}}
+        </ul>
+        {{/if}}
+    </div>
+</template>
+<template name="file">
+    <li class="list-group-item">
+        <span class="badge"></span> <strong>{{fileName}} split into {{chunkCount}} chunks.</strong>
+          <button type="submit" id="unregister" class="pull-right btn btn-sm btn-danger">Unregister</button>
+            {{#each chunks}} {{> peers}} {{/each}}
+    </li>
+</template>
+
+
+<template name="peers">
+    <li class="list-group-item">
+    
+{{this}}        
+    </li>
+</template>

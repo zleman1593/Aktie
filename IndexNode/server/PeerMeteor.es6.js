@@ -26,9 +26,6 @@
             };
         },
         registerFile: function (fileName, numberOfParts, hostNameWithPort) {
-            console.log(fileName);
-            console.log(numberOfParts);
-            console.log(hostNameWithPort);
             this.unblock;
             let file = Files.findOne({ "fileName": fileName });
             if (!(typeof file !== "undefined" && file !== null)) {
@@ -37,9 +34,8 @@
                     "chunks": []
                 };
                 console.log("registering new File with " + numberOfParts + " parts");
-                console.log("registering new File with " + JSON.stringify(numberOfParts) + " parts");
                 for (let i = 0; i < numberOfParts; i++) {
-                    fileToInsert.chunks.push(["139.140.213.86:4500"]);
+                    fileToInsert.chunks.push([hostNameWithPort]);
                 }
                 Files.insert(fileToInsert);
             } else {

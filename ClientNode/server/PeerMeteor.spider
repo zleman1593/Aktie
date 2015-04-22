@@ -8,14 +8,14 @@ var os = ::Meteor.npmRequire('os');
 var chunks = [];
 
 
-var writeLocation = '/Users/zackleman/Desktop/DDP-P2P/ClientNode/public/';
-var readLocation = '/Users/zackleman/Desktop/ClientNode2/public/';
-var TESTING_INDEX_NODES = ["http://IndexNode.meteor.com",,"http://localhost:5000"];
+var writeLocation = '../web.browser/app/';
+var readLocation = writeLocation;
+var TESTING_INDEX_NODES = ["http://IndexNode.meteor.com","http://localhost:5000"];
 var ONE_MIB = 1048576; // // 1 MiB
 var CHUNK_SIZE = ONE_MIB * 5;
 
 
-::Meteor.startup(fn() {
+::Meteor.startup(f2() {
 
     //Maybe alert an Index node that it is online?
     ::getOwnIPAndPort();
@@ -24,14 +24,14 @@ var CHUNK_SIZE = ONE_MIB * 5;
 
 ::Meteor.methods({
 
-    registerFiletoShare: fn(fileName) {
+    registerFiletoShare: f2(fileName) {
          this.unblock;
         ::registerFiletoShare(fileName);
     },
 
     //Called when the peer node wants to get a file
-    download: fn(file) {
-         this.unblock;
+    download: f2(file) {
+        this.unblock;
         var fileName = file;
         //Connect to an Index Node
         var indexNodeIP = ::findIndexNode();
@@ -40,19 +40,20 @@ var CHUNK_SIZE = ONE_MIB * 5;
 
         IndexNode.call('findFile', {
             "fileName": fileName
-        }, fn(error, result) {
+        }, f2(error, result) {
             if error? {
 
             } else {
                 console.log("Obtained File Location Information");
                 ::initPeerFileTransfer(result, fileName);
+
             }
         });
 
     },
 
     //Called when another peer wants part of a file from this client
-    getFileChunks: fn(requestedChunks) {
+    getFileChunks: f2(requestedChunks) {
          this.unblock;
         var chunkNumber = requestedChunks.chunk;
         var fileName = ::requestedChunks.fileName;
@@ -65,13 +66,13 @@ var CHUNK_SIZE = ONE_MIB * 5;
 });
 
 /*Will identify the most optimal IndexNode to connenct to.*/
- fn findIndexNode() {
+ f2 findIndexNode() {
     return TESTING_INDEX_NODES[0];
  } 
 
 
 
- fn getOwnIPAndPort() {
+ f2 getOwnIPAndPort() {
     var interfaces = os.networkInterfaces();
     var addresses = [];
     for  k in interfaces {
@@ -91,13 +92,13 @@ var CHUNK_SIZE = ONE_MIB * 5;
 
 
 /*When a client node wants to indicate to the network that it is avalible to share a file*/
-fn registerFiletoShare(fileName) {
+f2 registerFiletoShare(fileName) {
     var IndexNode = ::DDP.connect(findIndexNode());
     var hostNameWithPort = getOwnIPAndPort();
     var filepath = '\(readLocation)\(fileName)';
     var numberOfParts = ::splitFileCount(filepath);
 
-    IndexNode.call('registerFile', fileName, numberOfParts, hostNameWithPort, fn(error, result) {
+    IndexNode.call('registerFile', fileName, numberOfParts, hostNameWithPort, f2(error, result) {
         if (error) {
             console.log("Registration Failed");
         } else {
@@ -108,7 +109,7 @@ fn registerFiletoShare(fileName) {
 }
 
 /*Returns a specific chunk of the requested file*/
- fn getChunkOfFile(fileName, chunk) {
+ f2 getChunkOfFile(fileName, chunk) {
     console.log("Returning chunk File");
     var base64File  = ::fileSplit("\(readLocation)\(fileName)",chunk);
     if  base64File.result == -1{
@@ -122,10 +123,10 @@ fn registerFiletoShare(fileName) {
 }
 
 /*Merges chunks of file once all chunks have been downloaded to local client node*/
- fn concatFile(chunkList) {
+ f2 concatFile(chunkList) {
 
     //Make sure binary data string chunks are appeneded in the correct order
-    chunkList.sort(fn(a, b) {
+    chunkList.sort(f2(a, b) {
         if a.chunkNumber < b.chunkNumber {
             return -1;
         } else {
@@ -145,15 +146,15 @@ fn registerFiletoShare(fileName) {
 }
 
 /*Write the concatednated file to the local file system*/
- fn writeConcatedFile(base64String, fileName) {
+ f2 writeConcatedFile(base64String, fileName) {
     var decodedImage = new ::Buffer(base64String, 'base64');
-    fs.writeFile(writeLocation + fileName, decodedImage, fn(err) {});
+    fs.writeFile(writeLocation + fileName, decodedImage, f2(err) {});
 
     ::resetForNextFileTransfer(fileName);
 
 }
 
- fn resetForNextFileTransfer(fileName) {
+ f2 resetForNextFileTransfer(fileName) {
     //Reset chunks buffer
     chunks = [];
     //Now that the client node hat the whole file, it should share it with other peers
@@ -161,16 +162,16 @@ fn registerFiletoShare(fileName) {
 }
 
 /*Get all chunks from avalible peers*/
- fn initPeerFileTransfer(chunkHolder, fileName) {
+ f2 initPeerFileTransfer(chunkHolder, fileName) {
     console.log("Start Calling Peers for file transfer");
-
+//Todo; Sort chunks by peer. Start transfers from that peer with one open connection. The start others
     for var chunk = 0; chunk < chunkHolder.chunks.length; chunk++ {
 
         var peer = ::DDP.connect(chunkHolder.chunks[chunk].chunk);
         peer.call('getFileChunks', {
             "fileName": fileName,
             "chunk": chunk
-        }, fn(error, result) {
+        }, f2(error, result) {
             if error? {
                 console.log("ERROR for peer: \(chunk)");
             } else {
@@ -187,12 +188,12 @@ fn registerFiletoShare(fileName) {
 }
 
 /*Calcuate hwo many parts a given file should be split into*/
- fn splitFileCount(filePath) {
+ f2 splitFileCount(filePath) {
     var fileName  = filePath;
 
-   var parts =  ::Async.runSync(fn(done)  {
+   var parts =  ::Async.runSync(f2(done)  {
 
-            fs.stat(filePath, fn (err, stats) {
+            fs.stat(filePath, f2 (err, stats) {
                       if err? {
                         console.error(err);
                         done(null,0);
@@ -218,10 +219,10 @@ fn registerFiletoShare(fileName) {
 }
 
 
-fn fileSplit(file,chunkNumber){
+f2 fileSplit(file,chunkNumber){
     var fileName  = file;
-    var fileChunk =  ::Async.runSync(fn(done)  {
-           fs.stat(file, fn (err, stats) {
+    var fileChunk =  ::Async.runSync(f2(done)  {
+           fs.stat(file, f2 (err, stats) {
                      if err? {
                        console.error(err);
                        return done(null,"");
@@ -249,13 +250,13 @@ fn fileSplit(file,chunkNumber){
                      
                        readStream = fs.createReadStream(file, { flags: 'r', encoding: 'base64', start: start, end: end });
 
-                       readStream.on('data', fn(chunk) {
+                       readStream.on('data', f2(chunk) {
                            data+=chunk;
 
                            });
-                       fileChunk = ::Async.runSync(fn(done)  {
+                       fileChunk = ::Async.runSync(f2(done)  {
                       
-                       readStream.on('end', fn() {
+                       readStream.on('end', f2() {
 
                            done(null,data);
                            });
@@ -269,10 +270,10 @@ fn fileSplit(file,chunkNumber){
 }
 
 
-fn getWholeFile(fileName) {
+f2 getWholeFile(fileName) {
     console.log("Returning Whole File As one Chunk");
-    var encodedData = ::Async.runSync(fn (done) {
-            fs.readFile(fileName, fn(err, original_data) {
+    var encodedData = ::Async.runSync(f2 (done) {
+            fs.readFile(fileName, f2(err, original_data) {
              if !err? {
                       done(null,original_data.toString("base64"));
               } else {
