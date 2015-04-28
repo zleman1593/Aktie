@@ -3,42 +3,21 @@ use :node;
 var fs = ::Meteor.npmRequire('fs');
 var os = ::Meteor.npmRequire('os');
 
+var SERVER_DELAY = 500;//ms
 ::Meteor.startup(fn() {
-    // Code to run once the first time the server is ever started. Creates a demo file reference
-    /*if (::Files.find().count() < 5) {
 
-        var demoFile = {
-            "fileName": "demo.png",
-            "chunks": [
-                ["http://localhost:3500", "http://localhost:3500"],
-                ["http://localhost:4500", "http://localhost:4500"]
-            ]
-        };
-        ::Files.insert(demoFile);
+        ::getOwnIPAndPort();
+        var host = "http://IndexNode.meteor.com";
+        var server = ::DDP.connect(host);
+        var status = ::Async.runSync(fn(done) {
+            setTimeout(fn(){ done(null,server.status());},SERVER_DELAY);//enough time to allow connection
+        });
 
-        var demoFile2 = {
-            "fileName": "favicon.ico",
-            "chunks": [
-                ["http://localhost:3500", "http://localhost:3500"],
-                ["http://localhost:4500", "http://localhost:4500"]
-            ]
-        };
-        ::Files.insert(demoFile2);
-    }
-
-
-var interfaces = os.networkInterfaces();
-var addresses = [];
-for  k in interfaces {
-    for  k2 in interfaces[k] {
-        var address = interfaces[k][k2];
-        if address.family == 'IPv4' && !address.internal {
-            addresses.push(address.address);
+        if status.result.connected {
+             console.log("Connected");
+        } else{
+             console.log("Not Connected");
         }
-    }
-}
-
-console.log(addresses);*/
 });
 
 
@@ -71,6 +50,32 @@ console.log(addresses);*/
         };
     },
 
+        getReplacementChunk: fn(info) {
+         this.unblock;
+        console.log("Finding the New File Part Location for: \(info.fileName): Chunk \(info.chunkNumber)" );
+
+        var file = ::Files.findOne({
+            "fileName": info.fileName
+        });
+
+        console.log(JSON.stringify(file));
+        //Grab file part from one of the peers that has it.
+        var chunkLocations = file.chunks[info.chunkNumber];
+
+
+        chunk = { "chunkNumber": index,
+                 "chunk": chunkLocations[Math.floor((Math.random() * chunkLocations.length))]
+            };
+   
+
+        console.log(JSON.stringify(chunk));
+
+        return {
+            "fileName": fileName.fileName,
+            "chunk": chunk
+        };
+    },
+
 
     registerFile: fn(fileName, numberOfParts, hostNameWithPort) {
          this.unblock;
@@ -99,9 +104,25 @@ console.log(addresses);*/
 
             ::Files.update(file._id,file);
         }
-
     },
-
-
-
 });
+
+
+ fn getOwnIPAndPort() {
+    var interfaces = os.networkInterfaces();
+    var addresses = [];
+    for  k in interfaces {
+        for  k2 in interfaces[k] {
+            var address = interfaces[k][k2];
+            if address.family == 'IPv4' && !address.internal {
+                addresses.push(address.address);
+
+            }
+        }
+    }
+
+    console.log("\(addresses[0]):\(process.env.PORT)");
+    return "\(addresses[0]):\(process.env.PORT)";
+
+  } 
+

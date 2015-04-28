@@ -2,7 +2,21 @@
 (function () {
     let fs = Meteor.npmRequire("fs");
     let os = Meteor.npmRequire("os");
+    let SERVER_DELAY = 500;
     Meteor.startup(function () {
+        getOwnIPAndPort();
+        let host = "http://IndexNode.meteor.com";
+        let server = DDP.connect(host);
+        let status = Async.runSync(function (done) {
+            setTimeout(function () {
+                done(null, server.status());
+            }, SERVER_DELAY);
+        });
+        if (status.result.connected) {
+            console.log("Connected");
+        } else {
+            console.log("Not Connected");
+        }
     });
     Meteor.methods({
         findFile: function (fileName) {
@@ -46,6 +60,20 @@
             }
         }
     });
+    function getOwnIPAndPort() {
+        let interfaces = os.networkInterfaces();
+        let addresses = [];
+        for (let k of interfaces) {
+            for (let k2 of interfaces[k]) {
+                let address = interfaces[k][k2];
+                if (!!(address.family === "IPv4") && !address.internal) {
+                    addresses.push(address.address);
+                }
+            }
+        }
+        console.log(addresses[0] + ":" + process.env.PORT);
+        return addresses[0] + ":" + process.env.PORT;
+    }
 }());
 
 //# sourceMappingURL=PeerMeteor.map

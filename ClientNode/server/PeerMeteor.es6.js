@@ -3,14 +3,16 @@
     let fs = Meteor.npmRequire("fs");
     let os = Meteor.npmRequire("os");
     let chunks = [];
+    let SERVER_DELAY = 500;
     let writeLocation = "../web.browser/app/";
     let readLocation = writeLocation;
     let TESTING_INDEX_NODES = [
-        "http://IndexNode.meteor.com",
-        "http://localhost:5000"
+        "52.6.251.108:9999",
+        "http://IndexNode.meteor.com"
     ];
     let ONE_MIB = 1048576;
     let CHUNK_SIZE = ONE_MIB * 5;
+    let IndexNode;
     Meteor.startup(function () {
         getOwnIPAndPort();
     });
@@ -25,13 +27,15 @@
         download: function (file) {
             this.unblock;
             let fileName = file;
-            let indexNodeIP = findIndexNode();
-            let IndexNode = DDP.connect(indexNodeIP);
+            IndexNode = IndexNode.connected ? IndexNode : DDP.connect(findIndexNode());
             IndexNode.call("findFile", { "fileName": fileName }, function (error, result) {
                 if (typeof error !== "undefined" && error !== null) {
+                    console.log(" Error Obtaing File Information From Index");
+                    IndexNode.disconnect();
                 } else {
                     console.log("Obtained File Location Information");
                     initPeerFileTransfer(result, fileName);
+                    IndexNode.disconnect();
                 }
             });
         },
@@ -64,13 +68,13 @@
         return addresses[0] + ":" + process.env.PORT;
     }
     function registerFiletoShare(fileName) {
-        let IndexNode = DDP.connect(findIndexNode());
-        let hostNameWithPort = getOwnIPAndPort();
         let filepath = readLocation + fileName;
         let numberOfParts = splitFileCount(filepath);
         if (typeof numberOfParts.error !== "undefined" && numberOfParts.error !== null) {
             return numberOfParts.error;
         }
+        IndexNode = DDP.connect(findIndexNode());
+        let hostNameWithPort = getOwnIPAndPort();
         IndexNode.call("registerFile", fileName, numberOfParts.result, hostNameWithPort, function (error, result) {
             if (error) {
                 console.log("Registration Failed");
@@ -118,20 +122,39 @@
     function initPeerFileTransfer(chunkHolder, fileName) {
         console.log("Start Calling Peers for file transfer");
         for (let chunk = 0; chunk < chunkHolder.chunks.length; chunk++) {
-            let peer = DDP.connect(chunkHolder.chunks[chunk].chunk);
-            peer.call("getFileChunks", {
-                "fileName": fileName,
-                "chunk": chunk
-            }, function (error, result) {
-                if (typeof error !== "undefined" && error !== null) {
-                    console.log("ERROR for peer: " + chunk);
+            let host = chunkHolder.chunks[chunk].chunk;
+            Meteor.defer(function () {
+                let peer = DDP.connect(host);
+                let status = Async.runSync(function (done) {
+                    setTimeout(function () {
+                        done(null, peer.status());
+                    }, SERVER_DELAY);
+                });
+                if (status.result.connected) {
+                    let hostHolder = host;
+                    console.log("Peer " + chunk + " available!");
+                    peer.call("getFileChunks", {
+                        "fileName": fileName,
+                        "chunk": chunk
+                    }, function (error, result) {
+                        if (typeof error !== "undefined" && error !== null) {
+                            console.log("ERROR during connection to peer: " + chunk);
+                            let toDisC = DDP.connect(hostHolder);
+                            toDisC.disconnect();
+                        } else {
+                            console.log("Retrieved peer: " + chunk + " info");
+                            let toDisC = DDP.connect(hostHolder);
+                            toDisC.disconnect();
+                            chunks.push(result);
+                            if (chunks.length === chunkHolder.chunks.length) {
+                                let concatedFile = concatFile(chunks);
+                                writeConcatedFile(concatedFile, fileName);
+                            }
+                        }
+                    });
                 } else {
-                    console.log("Retrieved peer: " + chunk + " info");
-                    chunks.push(result);
-                    if (chunks.length === chunkHolder.chunks.length) {
-                        let concatedFile = concatFile(chunks);
-                        writeConcatedFile(concatedFile, fileName);
-                    }
+                    console.log("Could not connect to peer server for chunk " + chunk);
+                    IndexNode = IndexNode.connected ? IndexNode : DDP.connect(findIndexNode());
                 }
             });
         }
@@ -142,19 +165,19 @@
             fs.stat(filePath, function (err, stats) {
                 if (typeof err !== "undefined" && err !== null) {
                     console.error(err);
-                    done(err, null);
+                    return done(err, null);
                 }
                 if (stats.isDirectory()) {
                     console.error(fileName + " is a directory, but must be a file");
-                    done(null, 0);
+                    return done(null, 0);
                 }
                 if (stats.size < CHUNK_SIZE) {
                     console.log(fileName + " is less than " + CHUNK_SIZE / ONE_MIB + " MiB, won't be split");
-                    done(null, 1);
+                    return done(null, 1);
                 }
                 let parts = Math.ceil(stats.size / CHUNK_SIZE);
                 console.log(filePath + " will be split into " + parts);
-                done(null, parts);
+                return done(null, parts);
             });
         });
         return parts;
@@ -165,7 +188,7 @@
             fs.stat(file, function (err, stats) {
                 if (typeof err !== "undefined" && err !== null) {
                     console.error(err);
-                    return done(null, "");
+                    return done(err, null);
                 }
                 if (typeof stats !== "undefined" && stats !== null ? stats.isDirectory() : void 0) {
                     console.error(file + " is a directory, but must be a file");

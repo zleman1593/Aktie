@@ -7,11 +7,14 @@
 meteor-platform
 autopublish
 insecure
+
+
+
+twbs:bootstrap
+grigio:babel
+iron:router
+coffeescript
 meteorhacks:npm
 
 
 npm-container
-cfs:standard-packages
-cfs:filesystem
-twbs:bootstrap
-grigio:babel
