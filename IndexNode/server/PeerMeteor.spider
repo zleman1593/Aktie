@@ -58,12 +58,11 @@ var SERVER_DELAY = 500;//ms
             "fileName": info.fileName
         });
 
-        console.log(JSON.stringify(file));
         //Grab file part from one of the peers that has it.
         var chunkLocations = file.chunks[info.chunkNumber];
 
 
-        chunk = { "chunkNumber": index,
+        var chunk = { "chunkNumber": info.chunkNumber,
                  "chunk": chunkLocations[Math.floor((Math.random() * chunkLocations.length))]
             };
    
@@ -71,14 +70,18 @@ var SERVER_DELAY = 500;//ms
         console.log(JSON.stringify(chunk));
 
         return {
-            "fileName": fileName.fileName,
+            "fileName": info.fileName,
             "chunk": chunk
         };
     },
 
 
-    registerFile: fn(fileName, numberOfParts, hostNameWithPort) {
+    registerFile: fn(fileName, numberOfParts, hostNameWithPort,updateFromIndexNode) {
          this.unblock;
+         // if !updateFromIndexNode {
+         //     ::IndexNode.call('registerFile', fileName, numberOfParts.result, hostNameWithPort,true);        }
+         // }
+
         var file = ::Files.findOne({
             "fileName": fileName
         });
@@ -98,13 +101,31 @@ var SERVER_DELAY = 500;//ms
             ::Files.insert(fileToInsert);
         } else {
             //else add  to the file meta data that a new client has this file avalible
-            for var i = 0; i <  file.chunks.length; i++ {
-                file.chunks[i].push(hostNameWithPort);
-            }
 
-            ::Files.update(file._id,file);
+                for var i = 0; i <  file.chunks.length; i++ {
+                    //Don't allow duplicate entries
+                    if   !::_.contains(file.chunks[i],hostNameWithPort) {
+                    file.chunks[i].push(hostNameWithPort);
+                     }
+                }
+                ::Files.update(file._id,file);
         }
     },
+
+     registerFileChunk: fn(fileName, chunkNumber, hostNameWithPort,updateFromIndexNode) {
+        console.log("fileName: \(fileName). chunkNumber: \(chunkNumber)");
+        //this.unblock;
+        var file = ::Files.findOne({
+            "fileName": fileName
+        });
+        if file? {
+        file.chunks[chunkNumber].push(hostNameWithPort);     
+         ::Files.update(file._id,file);
+        } else{
+              throw new::Meteor.Error(500, 'Error 500: Not registered', 'A file by this name has not been registered.');
+        }
+    },
+
 });
 
 

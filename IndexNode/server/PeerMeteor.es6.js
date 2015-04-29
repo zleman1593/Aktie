@@ -39,7 +39,22 @@
                 "chunks": chunks
             };
         },
-        registerFile: function (fileName, numberOfParts, hostNameWithPort) {
+        getReplacementChunk: function (info) {
+            this.unblock;
+            console.log("Finding the New File Part Location for: " + info.fileName + ": Chunk " + info.chunkNumber);
+            let file = Files.findOne({ "fileName": info.fileName });
+            let chunkLocations = file.chunks[info.chunkNumber];
+            let chunk = {
+                "chunkNumber": info.chunkNumber,
+                "chunk": chunkLocations[Math.floor(Math.random() * chunkLocations.length)]
+            };
+            console.log(JSON.stringify(chunk));
+            return {
+                "fileName": info.fileName,
+                "chunk": chunk
+            };
+        },
+        registerFile: function (fileName, numberOfParts, hostNameWithPort, updateFromIndexNode) {
             this.unblock;
             let file = Files.findOne({ "fileName": fileName });
             if (!(typeof file !== "undefined" && file !== null)) {
@@ -54,17 +69,29 @@
                 Files.insert(fileToInsert);
             } else {
                 for (let i = 0; i < file.chunks.length; i++) {
-                    file.chunks[i].push(hostNameWithPort);
+                    if (!_.contains(file.chunks[i], hostNameWithPort)) {
+                        file.chunks[i].push(hostNameWithPort);
+                    }
                 }
                 Files.update(file._id, file);
+            }
+        },
+        registerFileChunk: function (fileName, chunkNumber, hostNameWithPort, updateFromIndexNode) {
+            console.log("fileName: " + fileName + ". chunkNumber: " + chunkNumber);
+            let file = Files.findOne({ "fileName": fileName });
+            if (typeof file !== "undefined" && file !== null) {
+                file.chunks[chunkNumber].push(hostNameWithPort);
+                Files.update(file._id, file);
+            } else {
+                throw new Meteor.Error(500, "Error 500: Not registered", "A file by this name has not been registered.");
             }
         }
     });
     function getOwnIPAndPort() {
         let interfaces = os.networkInterfaces();
         let addresses = [];
-        for (let k of interfaces) {
-            for (let k2 of interfaces[k]) {
+        for (let k in interfaces) {
+            for (let k2 in interfaces[k]) {
                 let address = interfaces[k][k2];
                 if (!!(address.family === "IPv4") && !address.internal) {
                     addresses.push(address.address);

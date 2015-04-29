@@ -1,0 +1,12 @@
+{
+  "dependencies": {
+    "random-access-file": {
+      "version": "0.3.1",
+      "dependencies": {
+        "thunky": {
+          "version": "0.1.0"
+        }
+      }
+    }
+  }
+}
