@@ -14,107 +14,17 @@
 
 
   <nav class="light-blue lighten-1" role="navigation">
-    <div class="nav-wrapper container"><a id="logo-container" href="{{pathFor route='displayFiles'}}" class="brand-logo">Aktie</a>
-      <ul class="right hide-on-med-and-down">
-        <li><a href="#">Navbar Link</a></li>
-      </ul>
-
-      <ul id="nav-mobile" class="side-nav">
-        <li><a href="#">Navbar Link</a></li>
-      </ul>
+    <div class="nav-wrapper container"><a id="logo-container" href="{{pathFor route='welcome'}}" class="brand-logo">Aktie<i class="mdi-image-flash-on"></i></a>
+   
       <a href="#" data-activates="nav-mobile" class="button-collapse"><i class="mdi-navigation-menu"></i></a>
     </div>
   </nav>
-  <div class="section no-pad-bot" id="index-banner">
-    <div class="container">
-      <br><br>
-      <h1 class="header center orange-text">Aktie (ˈakʦi̯ə)</h1>
-      <div class="row center">
-        <h5 class="header col s12 light">A Meteor/DDP based P2P filesharing System  </h5>
-      </div>
-      <div class="row center">
-        <a href="http://materializecss.com/getting-started.html" id="download-button" class="btn-large waves-effect waves-light orange">Get Started</a>
-      </div>
-      <br><br>
-
-    </div>
-  </div>
-
-
-  <div class="container">
-          {{> yield}}
-    <div class="section">
-
-      <!--   Icon Section   -->
-      <div class="row">
-        <div class="col s12 m4">
-          <div class="icon-block">
-            <h2 class="center light-blue-text"><i class="mdi-image-flash-on"></i></h2>
-            <h5 class="center">Speeds up development</h5>
-
-            <p class="light">We did most of the heavy lifting for you to provide a default stylings that incorporate our custom components. Additionally, we refined animations and transitions to provide a smoother experience for developers.</p>
-          </div>
-        </div>
-
-        <div class="col s12 m4">
-          <div class="icon-block">
-            <h2 class="center light-blue-text"><i class="mdi-social-group"></i></h2>
-            <h5 class="center">User Experience Focused</h5>
-
-            <p class="light">By utilizing elements and principles of Material Design, we were able to create a framework that incorporates components and animations that provide more feedback to users. Additionally, a single underlying responsive system across all platforms allow for a more unified user experience.</p>
-          </div>
-        </div>
-
-        <div class="col s12 m4">
-          <div class="icon-block">
-            <h2 class="center light-blue-text"><i class="mdi-action-settings"></i></h2>
-            <h5 class="center">Easy to work with</h5>
-
-            <p class="light">We have provided detailed documentation as well as specific code examples to help new users get started. We are also always open to feedback and can answer any questions a user may have about Materialize.</p>
-          </div>
-        </div>
-      </div>
-
-    </div>
-    <br><br>
-
-    <div class="section">
-
-    </div>
-  </div>
-
+           {{> yield}}
   <footer class="page-footer orange">
-    <div class="container">
-      <div class="row">
-        <div class="col l6 s12">
-          <h5 class="white-text">Company Bio</h5>
-          <p class="grey-text text-lighten-4">We are a team of college students working on this project like it's our full time job. Any amount would help support and continue development on this project and is greatly appreciated.</p>
-
-
-        </div>
-        <div class="col l3 s12">
-          <h5 class="white-text">Settings</h5>
-          <ul>
-            <li><a class="white-text" href="#!">Link 1</a></li>
-            <li><a class="white-text" href="#!">Link 2</a></li>
-            <li><a class="white-text" href="#!">Link 3</a></li>
-            <li><a class="white-text" href="#!">Link 4</a></li>
-          </ul>
-        </div>
-        <div class="col l3 s12">
-          <h5 class="white-text">Connect</h5>
-          <ul>
-            <li><a class="white-text" href="#!">Link 1</a></li>
-            <li><a class="white-text" href="#!">Link 2</a></li>
-            <li><a class="white-text" href="#!">Link 3</a></li>
-            <li><a class="white-text" href="#!">Link 4</a></li>
-          </ul>
-        </div>
-      </div>
-    </div>
+  
     <div class="footer-copyright">
       <div class="container">
-      Made by <a class="orange-text text-lighten-3" href="http://materializecss.com">Materialize</a>
+      Created by <a class="orange-text text-lighten-3" href="http://zackeryLeman.com">Zackery Leman & Chris Lu</a>
       </div>
     </div>
   </footer>
@@ -127,20 +37,24 @@
 
 <template name="displayFiles">
     <div class="container">
-        {{#if anyFiles}}
-        <p class="lead" id="cart"><strong>Indexed Files</strong></p>
-        <ul class="list-group">
-            {{#each files}} {{> file}} {{/each}}
-        </ul>
+        {{#if anyFiles}}   
+
+          <ul class="collection with-header">
+          <li class="collection-header"><h4>Indexed Files</h4></li>
+           {{#each files}} {{> file}} {{/each}}
+               </ul>
         {{/if}}
     </div>
 </template>
 <template name="file">
-    <li class="list-group-item">
-        <span class="badge"></span>
-        <h4><strong>{{fileName}} is split into {{chunkCount}} chunks.</strong></h4>
-        <button type="submit" id="unregister" class="btn btn-sm btn-danger">Unregister</button>
-        <a href="{{pathFor route='FileDetails'}}" id="seeChunks" class=" btn btn-sm btn-info">Chunk Locations</a>
+    
+    <li class="collection-item avatar">
+      <i class="mdi-file-folder circle"></i>
+      <span class="title">{{fileName}} </span>
+      <p>Split into {{chunkCount}} chunks</p>
+           <a id="unregister" class="waves-effect waves-light btn red right">Unregister</a>
+        <a href="{{pathFor route='FileDetails'}}" id="seeChunks" class="waves-effect waves-light btn right">Chunk Locations</a>
+
     </li>
 </template>
 <template name="FileDetails">
@@ -153,3 +67,65 @@
         {{this}}
     </li>
 </template>
+
+<template name="welcome">
+ <div class="section no-pad-bot" id="index-banner">
+    <div class="container">
+      <br><br>
+      <h1 class="header center orange-text">Aktie (ˈakʦi̯ə)</h1>
+      <div class="row center">
+        <h5 class="header col s12 light">A Meteor/DDP based P2P filesharing System  </h5>
+      </div>
+      <div class="row center">
+        <a href="{{pathFor route='displayFiles'}}" id="download-button" class="btn-large waves-effect waves-light orange">Get Started</a>
+      </div>
+      <br><br>
+
+    </div>
+  </div>
+
+
+  <div class="container">
+
+    <div class="section">
+
+      <!--   Icon Section   -->
+      <div class="row">
+        <div class="col s12 m4">
+          <div class="icon-block">
+            <h2 class="center light-blue-text"><i class="mdi-image-flash-on"></i></h2>
+            <h5 class="center">Rapid Data Transfers</h5>
+
+            <p class="light">Optimized simultaneous connectsons to peers enhances download speed.</p>
+          </div>
+        </div>
+
+        <div class="col s12 m4">
+          <div class="icon-block">
+            <h2 class="center light-blue-text"><i class="mdi-social-group"></i></h2>
+            <h5 class="center">Beautiful User Experience</h5>
+
+            <p class="light">We use the Material Design Philosophy to develop our UI</p>
+          </div>
+        </div>
+
+        <div class="col s12 m4">
+          <div class="icon-block">
+            <h2 class="center light-blue-text"><i class="mdi-action-settings"></i></h2>
+            <h5 class="center">Intuitive and Customizable</h5>
+
+            <p class="light"> You have the ability to share when you want and to select when operations can use the disk. </p>
+          </div>
+        </div>
+      </div>
+
+    </div>
+    <br><br>
+
+    <div class="section">
+
+    </div>
+  </div>
+
+  </template>
+

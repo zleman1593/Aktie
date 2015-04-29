@@ -1,14 +1,35 @@
 <head>
-  <title>DDP P2P</title>
+      <meta http-equiv="Content-Type" content="text/html; charset=UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1.0, user-scalable=no"/>
+    <meta name="description" content="">
+    <meta name="author" content="">
+    <title>Aktie</title>
+    <!-- Custom Fonts -->
 </head>
 
 <body>
-    <div class="container">
-  <h1>Welcome to our DDP P2P System!</h1>
-
-{{> startQuery}}
-    </div>
 </body>
+
+<template name="main">
+
+
+  <nav class="light-blue lighten-1" role="navigation">
+    <div class="nav-wrapper container"><a id="logo-container" href="{{pathFor route='welcome'}}" class="brand-logo">Aktie<i class="mdi-image-flash-on"></i></a>
+   
+      <a href="#" data-activates="nav-mobile" class="button-collapse"><i class="mdi-navigation-menu"></i></a>
+    </div>
+  </nav>
+           {{> yield}}
+  <footer class="page-footer orange">
+  
+    <div class="footer-copyright">
+      <div class="container">
+      Created by <a class="orange-text text-lighten-3" href="http://zackeryLeman.com">Zackery Leman & Chris Lu</a>
+      </div>
+    </div>
+  </footer>
+
+</template>
 
 <template name="startQuery">
     <div class="container">
@@ -19,10 +40,71 @@
     <input type="email" class="form-control" id="fileName" placeholder="Enter File Name">
   </div>
   
-  <button type="submit" id="search" class="btn btn-primary btn-lg">Download</button>
-
-  <button type="button"  id="register" class="btn btn-warning btn-lg">Register File</button>
+ <a id="search" class="waves-effect waves-light btn" >Download</a>
+    <a id="register" class="waves-effect waves-light btn" >Register File</a>
 
 </form>
     </div>
 </template>
+
+
+<template name="welcome">
+ <div class="section no-pad-bot" id="index-banner">
+    <div class="container">
+      <br><br>
+      <h1 class="header center orange-text">Aktie (ˈakʦi̯ə)</h1>
+      <div class="row center">
+        <h5 class="header col s12 light">A Meteor/DDP based P2P filesharing System  </h5>
+      </div>
+      <div class="row center">
+        <a href="{{pathFor route='startQuery'}}" id="download-button" class="btn-large waves-effect waves-light orange">Get Started</a>
+      </div>
+      <br><br>
+
+    </div>
+  </div>
+
+
+  <div class="container">
+
+    <div class="section">
+
+      <!--   Icon Section   -->
+      <div class="row">
+        <div class="col s12 m4">
+          <div class="icon-block">
+            <h2 class="center light-blue-text"><i class="mdi-image-flash-on"></i></h2>
+            <h5 class="center">Rapid Data Transfers</h5>
+
+            <p class="light">Optimized simultaneous connectsons to peers enhances download speed.</p>
+          </div>
+        </div>
+
+        <div class="col s12 m4">
+          <div class="icon-block">
+            <h2 class="center light-blue-text"><i class="mdi-social-group"></i></h2>
+            <h5 class="center">Beautiful User Experience</h5>
+
+            <p class="light">We use the Material Design Philosophy to develop our UI</p>
+          </div>
+        </div>
+
+        <div class="col s12 m4">
+          <div class="icon-block">
+            <h2 class="center light-blue-text"><i class="mdi-action-settings"></i></h2>
+            <h5 class="center">Intuitive and Customizable</h5>
+
+            <p class="light"> You have the ability to share when you want and to select when operations can use the disk. </p>
+          </div>
+        </div>
+      </div>
+
+    </div>
+    <br><br>
+
+    <div class="section">
+
+    </div>
+  </div>
+
+  </template>

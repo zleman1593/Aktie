@@ -3,10 +3,15 @@ Router.configure
 
 
 Router.route '/', (->
+  @render 'welcome'
+  return
+  ), name: 'welcome'
+
+
+Router.route '/allFiles', (->
   @render 'displayFiles'
   return
   ), name: 'displayFiles'
-
 
 
 Router.route '/file/:_id', (->
