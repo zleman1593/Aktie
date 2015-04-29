@@ -1,2 +1,2 @@
 Files = new Mongo.Collection('files');
-IndexNodes = new Mongo.Collection('indexNodes');
+BackupForPartner = new Mongo.Collection('backupForPartner');

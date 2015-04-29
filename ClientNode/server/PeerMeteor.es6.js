@@ -80,7 +80,7 @@
         if (typeof numberOfParts.error !== "undefined" && numberOfParts.error !== null) {
             return numberOfParts.error;
         }
-        IndexNode = DDP.connect(findIndexNode(fileName));
+        IndexNode = !!IndexNode && !!IndexNode.status().connected ? IndexNode : DDP.connect(findIndexNode(fileName));
         let hostNameWithPort = getOwnIPAndPort();
         IndexNode.call("registerFile", fileName, numberOfParts.result, hostNameWithPort, false, function (error, result) {
             if (error) {
@@ -89,7 +89,6 @@
                 console.log("Registered File with Index Server");
             }
         });
-        return null;
     }
     function registerFileChunkToShare(fileName, chunkNumber) {
         IndexNode = DDP.connect(findIndexNode(fileName));
@@ -341,7 +340,7 @@
         for (let i = 0; i < fileName.length; i++) {
             sum += fileName.charCodeAt(i);
         }
-        let bucket = (sum % 4) - 1;
+        let bucket = sum % 4 - 1;
         return bucket;
     }
 }());

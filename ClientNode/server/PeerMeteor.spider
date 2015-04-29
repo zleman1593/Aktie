@@ -31,56 +31,56 @@ var openFD = null;
 
 
 ::Meteor.methods({
-
-    registerFiletoShare: fn(fileName) {
-        this.unblock;
-        var error = ::registerFiletoShare(fileName);
-        if error? {
-            throw new::Meteor.Error(500, 'Error 500: Not found', 'the file is not found');
-        }
-
-    },
-
-    //Called when the peer node wants to get a file
-    download: fn(file) {
-        this.unblock;
-        var fileName = file;
-        //Connect to an Index Node
-        ::IndexNode = ::IndexNode if IndexNode?.status().connected else ::DDP.connect(::findIndexNode(fileName));
-
-
-        ::IndexNode.call('findFile', {
-            "fileName": fileName
-        }, fn(error, result) {
-            if error? {
-                console.log(error.reason);
-                //::IndexNode.disconnect();
-            } else {
-                console.log("Obtained File Location Information");
-                transferComplete = false;
-                ::initPeerFileTransfer(result, fileName);
-                //::IndexNode.disconnect();
-            }
-        });
-
-    },
-
-    //Called when another peer wants part of a file from this client
-    getFileChunks: fn(requestedChunks) {
-        this.unblock;
-        var chunkNumber = requestedChunks.chunk;
-        var fileName = ::requestedChunks.fileName;
-        var data = ::getChunkOfFile(fileName, chunkNumber);
-        return {
-            "rawData": data,
-            "chunkNumber": chunkNumber
-        };
+    
+registerFiletoShare: fn(fileName) {
+    this.unblock;
+    var error = ::registerFiletoShare(fileName);
+    if error? {
+        throw new::Meteor.Error(500, 'Error 500: Not found', 'the file is not found');
     }
+    
+},
+    
+    //Called when the peer node wants to get a file
+download: fn(file) {
+    this.unblock;
+    var fileName = file;
+    //Connect to an Index Node
+    ::IndexNode = ::IndexNode if IndexNode?.status().connected else ::DDP.connect(::findIndexNode(fileName));
+    
+    
+    ::IndexNode.call('findFile', {
+        "fileName": fileName
+    }, fn(error, result) {
+        if error? {
+            console.log(error.reason);
+            //::IndexNode.disconnect();
+        } else {
+            console.log("Obtained File Location Information");
+            transferComplete = false;
+            ::initPeerFileTransfer(result, fileName);
+            //::IndexNode.disconnect();
+        }
+    });
+    
+},
+    
+    //Called when another peer wants part of a file from this client
+getFileChunks: fn(requestedChunks) {
+    this.unblock;
+    var chunkNumber = requestedChunks.chunk;
+    var fileName = ::requestedChunks.fileName;
+    var data = ::getChunkOfFile(fileName, chunkNumber);
+    return {
+        "rawData": data,
+        "chunkNumber": chunkNumber
+    };
+}
 });
 
 /*Will identify the most optimal IndexNode to connenct to.*/
 fn findIndexNode(fileName) {
-
+    
     return currentIndexNodes[::hash(fileName)];
 }
 
@@ -94,14 +94,14 @@ fn getOwnIPAndPort() {
             var address = interfaces[k][k2];
             if address.family == 'IPv4' && !address.internal {
                 addresses.push(address.address);
-
+                
             }
         }
     }
-
+    
     console.log("\(addresses[0]):\(process.env.PORT)");
     return "\(addresses[0]):\(process.env.PORT)";
-
+    
 }
 
 
@@ -112,18 +112,17 @@ fn registerFiletoShare(fileName) {
     if numberOfParts.error? {
         return numberOfParts.error;
     }
-    ::IndexNode = ::DDP.connect(findIndexNode(fileName));
+    ::IndexNode = ::IndexNode if (::IndexNode and ::IndexNode.status().connected) else ::DDP.connect(::findIndexNode(fileName));
     var hostNameWithPort = getOwnIPAndPort();
-
+    
     ::IndexNode.call('registerFile', fileName, numberOfParts.result, hostNameWithPort, false, fn(error, result) {
         if (error) {
             console.log("Registration Failed");
         } else {
             console.log("Registered File with Index Server");
-
+            
         }
     });
-    return null;
 }
 
 /*When a client node wants to indicate to the network that it is avalible to share a file*/
@@ -135,7 +134,7 @@ fn registerFileChunkToShare(fileName,chunkNumber) {
             console.log("Registration of Chunk Failed");
         } else {
             console.log("Registered File Chunk with Index Server");
-
+            
         }
     });
 }
@@ -144,35 +143,35 @@ fn registerFileChunkToShare(fileName,chunkNumber) {
 fn getChunkOfFile(fileName, chunk) {
     //Problem could be when FD is closed while this chunk is being transf
     if  fileName == openFileName {
-         var offset = CHUNK_SIZE * chunk;
+        var offset = CHUNK_SIZE * chunk;
         var length =  CHUNK_SIZE;
-         var base64File = ::Async.runSync( fn(done) {
-                 openFD.read(offset,length , fn(err, buffer) {
-                        done(null,buffer);
-                });
-         });
-      return {
+        var base64File = ::Async.runSync( fn(done) {
+            openFD.read(offset,length , fn(err, buffer) {
+                done(null,buffer);
+            });
+        });
+        return {
             "base64File": base64File,
             "part": chunk
         };
-
+        
     } else{
-    console.log("Returning chunk File");
-    var base64File = ::fileSplit("\(readLocation)\(fileName)", chunk);
-    if base64File.result == -1 {
+        console.log("Returning chunk File");
+        var base64File = ::fileSplit("\(readLocation)\(fileName)", chunk);
+        if base64File.result == -1 {
             base64File = ::getWholeFile("\(readLocation)\(fileName)", chunk);
         }
-
-    return {
-        "base64File": base64File,
-        "part": chunk
-    };
-}
+        
+        return {
+            "base64File": base64File,
+            "part": chunk
+        };
+    }
 }
 
 /*Merges chunks of file once all chunks have been downloaded to local client node*/
 fn concatFile(chunkList) {
-
+    
     //Make sure binary data string chunks are appeneded in the correct order
     chunkList.sort(fn(a, b) {
         if a.chunkNumber < b.chunkNumber {
@@ -180,13 +179,13 @@ fn concatFile(chunkList) {
         } else {
             return 1;
         }
-
+        
     });
     //console.log(chunkList);
     //console.log(JSON.stringify(chunkList));
-
+    
     var data = chunkList[0].rawData.base64File.result;
-
+    
     for var i = 1; i < chunkList.length; i++{
         data += chunkList[i].rawData.base64File.result;
     }
@@ -195,10 +194,10 @@ fn concatFile(chunkList) {
 
 /*Write the concatednated file to the local file system*/
 fn writeConcatedFile(base64String, fileName) {
-     ::Async.runSync( fn(done) {
-    var decodedImage = new::Buffer(base64String, 'base64');
-    fs.writeFile(writeLocation + fileName, decodedImage, fn(err) {done(null,null);});
-        });
+    ::Async.runSync( fn(done) {
+        var decodedImage = new::Buffer(base64String, 'base64');
+        fs.writeFile(writeLocation + fileName, decodedImage, fn(err) {done(null,null);});
+    });
 }
 
 /*Write the concatednated file to the local file system*/
@@ -207,15 +206,15 @@ fn writeFileRandomly(base64String, fileName,chunkNumber) {
     var offset = CHUNK_SIZE * chunkNumber;
     // an optional file size can be given as 2nd param to randomAccessFile
     var file = randomAccessFile(writeLocation + fileName);
-
+    
     ::Async.runSync( fn(done) {
         file.write(offset, decodedImage, fn(err) {
-                    done(null,"closed");
-         });
+            done(null,"closed");
+        });
     });
-
-  return file;
-
+    
+    return file;
+    
 }
 
 fn resetForNextFileTransferIfFileWasConcatedInMemory(fileName) {
@@ -239,134 +238,134 @@ fn resetForNextFileTransferIfFileWasConcatedOnDisk() {
 /*Get all chunks from avalible peers*/
 fn initPeerFileTransfer(chunkHolder, fileName) {
     console.log("Start Calling Peers for file transfer");
-       var numberOfParts = chunkHolder.chunks.length;
+    var numberOfParts = chunkHolder.chunks.length;
     //Todo; Sort chunks by peer. Start transfers from that peer with one open connection. The start others
     for var chunk = 0; chunk < chunkHolder.chunks.length; chunk++{
         var host = chunkHolder.chunks[chunk].chunk;
-             ::Meteor.defer(fn() {
-             ::getChunk(chunk, fileName, host,numberOfParts, true);
-             });
+        ::Meteor.defer(fn() {
+            ::getChunk(chunk, fileName, host,numberOfParts, true);
+        });
     }
-     //Collect all the missinhg parts
-      //Only allows for one more attempt for a fiel chunk if first fails. Need to make more robust
-  var timer = ::setInterval(::Meteor.bindEnvironment(fn() {
-                    console.log("CheckingSum");
-                    if missingChunks.length + chunks.length == numberOfParts  {
-                                ::clearTimeout(::timer);
-                        for var missingChunk = 0; missingChunk < missingChunks.length; missingChunk++{
-                        ::getChunk(0, fileName, missingChunks[missingChunk], numberOfParts,false);
-                    }
-                
-                    } else {
-                        console.log("Not there yet:" + missingChunks.length + chunks.length);
-                        //While timer was not executing the file was finished. This will stop the timer
-                        if transferComplete {
-                            ::clearTimeout(::timer);
-                        }
-                    }
-                }),1000);
-
-      }
+    //Collect all the missinhg parts
+    //Only allows for one more attempt for a fiel chunk if first fails. Need to make more robust
+    var timer = ::setInterval(::Meteor.bindEnvironment(fn() {
+        console.log("CheckingSum");
+        if missingChunks.length + chunks.length == numberOfParts  {
+            ::clearTimeout(::timer);
+            while missingChunks.length == 0 {
+                ::getChunk(0, fileName, missingChunks.pop(), numberOfParts,false);
+            }
             
+        } else {
+            console.log("Not there yet:" + missingChunks.length + chunks.length);
+            //While timer was not executing the file was finished. This will stop the timer
+            if transferComplete {
+                ::clearTimeout(::timer);
+            }
+        }
+    }),1000);
+    
+}
+
 
 
 fn getChunk(chunk, fileName,host,numberOfParts,firstTime) {
-  if ::getOwnIPAndPort() == host {return;}//debugging
-
-            var peer = ::DDP.connect(host);
-            var status = ::Async.runSync(fn(done) {
-                setTimeout(fn() {
-                    done(null, peer.status());
-                }, SERVER_DELAY); //enough time to allow connection
-            });
-
-            if status.result.connected {
-                var hostHolder = host;
-                console.log("Peer \(chunk) available!");
-
-                peer.call('getFileChunks', {
-                    "fileName": fileName,
-                    "chunk": chunk
-                }, fn(error, result) {
-                    if error? {
-                        console.log("ERROR during connection to peer: \(chunk)");
-                        // var toDisC = ::DDP.connect(hostHolder);
-                        // toDisC.disconnect();
-                    } else {
-                        console.log("Retrieved peer: \(chunk ) info");
-                        // var toDisC = ::DDP.connect(hostHolder);
-                        // toDisC.disconnect();
-
-                        if !distributeIO {
-                            chunks.push(result);
-                        } else{
-                            chunks.push(chunk);
-                            openFD = writeFileRandomly(result.rawData.base64File.result, fileName,chunk);
-                            openFileName = openFD.fileName;
-                            //share the chunk
-                            registerFileChunkToShare(fileName,chunk);
-                        }
-                        
-                        if chunks.length == numberOfParts {
-                            transferComplete = true;
-                            if !distributeIO {
-                            var concatedFile = concatFile(chunks);
-                            writeConcatedFile(concatedFile, fileName);
-                            ::resetForNextFileTransferIfFileWasConcatedInMemory(fileName);
-                             } else{
-                             openFD.close(fn() {console.log('file is closed');});
-                            ::resetForNextFileTransferIfFileWasConcatedOnDisk();
-                            }
-
-                        }
-                    }
-                });
+    if ::getOwnIPAndPort() == host {return;}//debugging
+    
+    var peer = ::DDP.connect(host);
+    var status = ::Async.runSync(fn(done) {
+        setTimeout(fn() {
+            done(null, peer.status());
+        }, SERVER_DELAY); //enough time to allow connection
+    });
+    
+    if status.result.connected {
+        var hostHolder = host;
+        console.log("Peer \(chunk) available!");
+        
+        peer.call('getFileChunks', {
+            "fileName": fileName,
+            "chunk": chunk
+        }, fn(error, result) {
+            if error? {
+                console.log("ERROR during connection to peer: \(chunk)");
+                // var toDisC = ::DDP.connect(hostHolder);
+                // toDisC.disconnect();
             } else {
-                peer.disconnect();//Prevent reconnection attemps
-                //Ask index server for new machien for chunk
-                console.log("Could not connect to peer server for chunk \(chunk)");
-                ::IndexNode = ::IndexNode if (::IndexNode and ::IndexNode.status().connected) else ::DDP.connect(::findIndexNode(fileName));
-                 console.log("Connection to IndexNode: " + IndexNode.status());
-                ::IndexNode.call("getReplacementChunk", {
-                    "fileName": fileName,
-                    "chunkNumber": chunk
-                }, fn(error, result) {
-                    if error? {
-                        console.log("Error: Could not Obtain Replacement Chunk location From Index");
-                    } else {
-                        console.log("Obtained Replacement Chunk File Location Information: \(JSON.stringify(result.chunk))");
-                        if firstTime {
-                        ::missingChunks.push(result.chunk.chunk);
-                      }
-
+                console.log("Retrieved peer: \(chunk ) info");
+                // var toDisC = ::DDP.connect(hostHolder);
+                // toDisC.disconnect();
+                
+                if !distributeIO {
+                    chunks.push(result);
+                } else{
+                    chunks.push(chunk);
+                    openFD = writeFileRandomly(result.rawData.base64File.result, fileName,chunk);
+                    openFileName = openFD.fileName;
+                    //share the chunk
+                    registerFileChunkToShare(fileName,chunk);
+                }
+                
+                if chunks.length == numberOfParts {
+                    transferComplete = true;
+                    if !distributeIO {
+                        var concatedFile = concatFile(chunks);
+                        writeConcatedFile(concatedFile, fileName);
+                        ::resetForNextFileTransferIfFileWasConcatedInMemory(fileName);
+                    } else{
+                        openFD.close(fn() {console.log('file is closed');});
+                        ::resetForNextFileTransferIfFileWasConcatedOnDisk();
                     }
-                });
+                    
+                }
             }
-
+        });
+    } else {
+        peer.disconnect();//Prevent reconnection attemps
+        //Ask index server for new machien for chunk
+        console.log("Could not connect to peer server for chunk \(chunk)");
+        ::IndexNode = ::IndexNode if (::IndexNode and ::IndexNode.status().connected) else ::DDP.connect(::findIndexNode(fileName));
+        console.log("Connection to IndexNode: " + IndexNode.status());
+        ::IndexNode.call("getReplacementChunk", {
+            "fileName": fileName,
+            "chunkNumber": chunk
+        }, fn(error, result) {
+            if error? {
+                console.log("Error: Could not Obtain Replacement Chunk location From Index");
+            } else {
+                console.log("Obtained Replacement Chunk File Location Information: \(JSON.stringify(result.chunk))");
+                if firstTime {
+                    ::missingChunks.push(result.chunk.chunk);
+                }
+                
+            }
+        });
+    }
+    
 }
 
 /*Calcuate hwo many parts a given file should be split into*/
 fn splitFileCount(filePath) {
     var fileName = filePath;
-
+    
     var parts = ::Async.runSync(fn(done) {
-
+        
         fs.stat(filePath, fn(err, stats) {
             if err? {
                 console.error(err);
                 return done(err, null);
             }
-
+            
             if stats.isDirectory() {
                 console.error(fileName + ' is a directory, but must be a file');
                 return done(null, 0);
             }
-
+            
             if stats.size < CHUNK_SIZE {
                 console.log(fileName + ' is less than ' + CHUNK_SIZE / ONE_MIB + ' MiB, won\'t be split');
                 return done(null, 1);
             }
-
+            
             var parts = Math.ceil(stats.size / CHUNK_SIZE);
             console.log("\(filePath) will be split into \(parts)");
             return done(null, parts);
@@ -385,52 +384,52 @@ fn fileSplit(file, chunkNumber) {
                 console.error(err);
                 return done(err, null);
             }
-
+            
             if stats ? .isDirectory() {
                 console.error(file + ' is a directory, but must be a file');
                 return done({
                     "reason": file + ' is a directory, but must be a file'
                 }, null);
             }
-
+            
             if stats.size < CHUNK_SIZE {
                 console.log(file + ' is less than ' + CHUNK_SIZE / ONE_MIB + ' MiB, won\'t be split');
                 return done(null, -1);
             }
-
+            
             done(null, 1);
         });
     });
-
+    
     if fileChunk.result == 1 {
         var data = '';
         var readStream;
         
         var start = CHUNK_SIZE * chunkNumber;
         var end = start + CHUNK_SIZE - 1;
-
+        
         readStream = fs.createReadStream(file, {
-            flags: 'r',
-            encoding: 'base64',
-            start: start,
-            end: end
+        flags: 'r',
+        encoding: 'base64',
+        start: start,
+        end: end
         });
-
+        
         readStream.on('data', fn(chunk) {
             data += chunk;
         });
         fileChunk = ::Async.runSync(fn(done) {
-
+            
             readStream.on('end', fn() {
-
+                
                 done(null, data);
             });
-
+            
         });
-
+        
     }
-
-
+    
+    
     return fileChunk;
 }
 
@@ -446,18 +445,18 @@ fn getWholeFile(fileName) {
             }
         });
     });
-
+    
     return encodedData;
 }
 
 
- fn hash(fileName){
-        var sum = 0;
-        for var i = 0; i < fileName.length; i++ {
-            sum += fileName.charCodeAt(i);
-        }
-
-        var bucket = (sum % 4 ) - 1;
-
-        return bucket;
+fn hash(fileName){
+    var sum = 0;
+    for var i = 0; i < fileName.length; i++ {
+        sum += fileName.charCodeAt(i);
     }
+    
+    var bucket = (sum % 4 ) - 1;
+    
+    return bucket;
+}

@@ -4,19 +4,42 @@ var fs = ::Meteor.npmRequire('fs');
 var os = ::Meteor.npmRequire('os');
 
 var SERVER_DELAY = 500;//ms
-::Meteor.startup(fn() {
 
+var backupTask = new ScheduledTask('at 12:01 am', fn () {
+    backupPartnerToSelf();
+  console.log("Backup was run.");
+});
+
+var heartbeatCheck = new ScheduledTask('every 30 sec', fn () {
+
+if PartnerIndex.status().connected {
+  console.log("Partner is healthy!");
+} else{
+      console.log("Partner is DOWN!");
+        console.log("Spawning replacement!");
+        console.log("Restoring replacement!");
+}
+});
+
+var PartnerIndex;
+
+::Meteor.startup(fn() {
+        //Init backup schedule
+        backupTask.start();
+        //Report own Address
         ::getOwnIPAndPort();
-        var host = "http://IndexNode.meteor.com";
-        var server = ::DDP.connect(host);
+        //Connect to partner and maintin heartbeat
+        var partnerAddress = "http://IndexNode.meteor.com";
+         PartnerIndex = ::DDP.connect(host);
+
         var status = ::Async.runSync(fn(done) {
             setTimeout(fn(){ done(null,server.status());},SERVER_DELAY);//enough time to allow connection
         });
 
         if status.result.connected {
-             console.log("Connected");
+             console.log("Connected to partner");
         } else{
-             console.log("Not Connected");
+             console.log("Not Connected to partner");
         }
 });
 
@@ -146,4 +169,22 @@ var SERVER_DELAY = 500;//ms
     return "\(addresses[0]):\(process.env.PORT)";
 
   } 
+
+fn backupPartnerToSelf(){
+    //Remove old Backup
+    BackupForPartner.remove({});
+    //Create new backup
+    PartnerIndex.subscribe("allFiles");
+
+    AllFilesToBeBackedUp = new Mongo.Collection('toBackup', {connection: PartnerIndex});
+
+    var cursor = AllFilesToBeBackedUp.find();
+
+     cursor.forEach(fn(doc){
+         ::BackupForPartner.insert(doc);
+    });
+
+   
+}
+
 

@@ -11,7 +11,8 @@ meteorhacks:npm
 
 
 npm-container
-twbs:bootstrap
 grigio:babel
 iron:router
 coffeescript
+aldeed:scheduled-tasks
+materialize:materialize
