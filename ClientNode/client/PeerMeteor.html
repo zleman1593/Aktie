@@ -14,10 +14,23 @@
 
 
   <nav class="light-blue lighten-1" role="navigation">
-    <div class="nav-wrapper container"><a id="logo-container" href="{{pathFor route='welcome'}}" class="brand-logo">Aktie<i class="mdi-image-flash-on"></i></a>
+  {{#if home}}
+    <div class="nav-wrapper container"><a id="logo-container" href="{{pathFor route='welcome'}}" class="brand-logo"> <img src="logo.png" alt="" class="logo"> Aktie<i class="mdi-image-flash-on"></i></a>
    
       <a href="#" data-activates="nav-mobile" class="button-collapse"><i class="mdi-navigation-menu"></i></a>
     </div>
+    {{else}}
+     <div class="nav-wrapper">
+      <form>
+        <div class="input-field">
+          <input id="search" type="search"  placeholder="Search by file name" required>
+          <label for="search"><i class="mdi-action-search"></i></label>
+          <i class="mdi-navigation-close"></i>
+        </div>
+
+      </form>
+    </div>
+{{/if}}
   </nav>
            {{> yield}}
   <footer class="page-footer orange">
@@ -34,16 +47,31 @@
 <template name="startQuery">
     <div class="container">
      
-     <form>
-  <div class="form-group">
-    <label for="exampleInputEmail1">File Name</label>
-    <input type="email" class="form-control" id="fileName" placeholder="Enter File Name">
+     <div class="switch memoryUse">
+    <label>
+     Write to disk once
+      <input checked type="checkbox">
+      <span class="lever"></span>
+        Allow random access writes
+    </label>
   </div>
-  
- <a id="search" class="waves-effect waves-light btn" >Download</a>
-    <a id="register" class="waves-effect waves-light btn" >Register File</a>
+    <div class="switch memoryUse">
+    <label>
+          No sharing
+      <input checked type="checkbox">
+      <span class="lever"></span>
+      Share while downloading
+    </label>
+  </div>
+      
+ <div class="progress">
+      <div class="determinate" style="width: {{percentTransfer}}%"></div>
+  </div>
+  <ul class="collection with-header">
+  <li class="collection-header"> <a id="refresh" class="waves-effect waves-light btn blue">See Files on Local Disk</a></li>
 
-</form>
+           {{#each shareableFiles}} {{> file}} {{/each}}
+               </ul>
     </div>
 </template>
 
@@ -76,7 +104,7 @@
             <h2 class="center light-blue-text"><i class="mdi-image-flash-on"></i></h2>
             <h5 class="center">Rapid Data Transfers</h5>
 
-            <p class="light">Optimized simultaneous connectsons to peers enhances download speed.</p>
+            <p class="light">Optimized simultaneous connections to peers enhances download speed.</p>
           </div>
         </div>
 
@@ -85,7 +113,7 @@
             <h2 class="center light-blue-text"><i class="mdi-social-group"></i></h2>
             <h5 class="center">Beautiful User Experience</h5>
 
-            <p class="light">We use the Material Design Philosophy to develop our UI</p>
+            <p class="light">We use the Material Design Philosophy to develop our UI.</p>
           </div>
         </div>
 
@@ -94,7 +122,7 @@
             <h2 class="center light-blue-text"><i class="mdi-action-settings"></i></h2>
             <h5 class="center">Intuitive and Customizable</h5>
 
-            <p class="light"> You have the ability to share when you want and to select when operations can use the disk. </p>
+            <p class="light"> You have the ability to share when you want and to select when operations can use the disk.</p>
           </div>
         </div>
       </div>
@@ -108,3 +136,14 @@
   </div>
 
   </template>
+
+  <template name="file">
+    
+    <li class="collection-item avatar">
+      <!--<i class="mdi-file-folder circle"></i>!-->
+      <span class="title name" value="{{this}}">{{this}} </span>
+           <a id="register" class="waves-effect waves-light btn red right {{this}}">Share</a>
+
+
+    </li>
+</template>

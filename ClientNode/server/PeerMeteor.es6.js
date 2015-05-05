@@ -32,6 +32,16 @@
                 throw new Meteor.Error(500, "Error 500: Not found", "the file is not found");
             }
         },
+        getShareableFiles: function () {
+            this.unblock;
+            let result = fs.readdirSync(readLocation);
+            console.log(result);
+            return result;
+        },
+        getPercent: function () {
+            this.unblock;
+            return 61 / chunks.length * 100;
+        },
         download: function (file) {
             this.unblock;
             let fileName = file;
@@ -39,6 +49,7 @@
             IndexNode.call("findFile", { "fileName": fileName }, function (error, result) {
                 if (typeof error !== "undefined" && error !== null) {
                     console.log(error.reason);
+                      throw new Meteor.Error(240, "Error 320: Could Not find file", "A file by this name has not been registered.");
                 } else {
                     console.log("Obtained File Location Information");
                     transferComplete = false;
@@ -91,7 +102,7 @@
         });
     }
     function registerFileChunkToShare(fileName, chunkNumber) {
-        IndexNode = DDP.connect(findIndexNode(fileName));
+        IndexNode = !!IndexNode && !!IndexNode.status().connected ? IndexNode : DDP.connect(findIndexNode(fileName));
         let hostNameWithPort = getOwnIPAndPort();
         IndexNode.call("registerFileChunk", fileName, chunkNumber, hostNameWithPort, false, function (error, result) {
             if (error) {
@@ -183,8 +194,8 @@
             console.log("CheckingSum");
             if (missingChunks.length + chunks.length === numberOfParts) {
                 clearTimeout(timer);
-                for (let missingChunk = 0; missingChunk < missingChunks.length; missingChunk++) {
-                    getChunk(0, fileName, missingChunks[missingChunk], numberOfParts, false);
+                while (missingChunks.length === 0) {
+                    getChunk(0, fileName, missingChunks.pop(), numberOfParts, false);
                 }
             } else {
                 console.log("Not there yet:" + missingChunks.length + chunks.length);
@@ -340,7 +351,8 @@
         for (let i = 0; i < fileName.length; i++) {
             sum += fileName.charCodeAt(i);
         }
-        let bucket = sum % 4 - 1;
+        let bucket = sum % 4;
+        console.log(bucket);
         return bucket;
     }
 }());

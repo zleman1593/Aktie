@@ -40,6 +40,20 @@ registerFiletoShare: fn(fileName) {
     }
     
 },
+
+getShareableFiles: fn() {
+    this.unblock;
+   var result = fs.readdirSync(readLocation);
+   console.log(result);
+   return result;
+    
+},
+
+getPercent: fn() {
+    this.unblock;
+  return ( 61 / chunks.length ) * 100;
+    
+},
     
     //Called when the peer node wants to get a file
 download: fn(file) {
@@ -55,6 +69,7 @@ download: fn(file) {
         if error? {
             console.log(error.reason);
             //::IndexNode.disconnect();
+                   throw new ::Meteor.Error(240, "Error 320: Could Not find file", "A file by this name has not been registered.");
         } else {
             console.log("Obtained File Location Information");
             transferComplete = false;
@@ -127,7 +142,7 @@ fn registerFiletoShare(fileName) {
 
 /*When a client node wants to indicate to the network that it is avalible to share a file*/
 fn registerFileChunkToShare(fileName,chunkNumber) {
-    ::IndexNode = ::DDP.connect(findIndexNode(fileName));
+     ::IndexNode = ::IndexNode if IndexNode?.status().connected else ::DDP.connect(::findIndexNode(fileName));
     var hostNameWithPort = getOwnIPAndPort();
     ::IndexNode.call('registerFileChunk', fileName, chunkNumber, hostNameWithPort, false, fn(error, result) {
         if (error) {
@@ -456,7 +471,7 @@ fn hash(fileName){
         sum += fileName.charCodeAt(i);
     }
     
-    var bucket = (sum % 4 ) - 1;
+    var bucket = (sum % 4 );
     
     return bucket;
 }

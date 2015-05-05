@@ -49,7 +49,7 @@
 <template name="file">
     
     <li class="collection-item avatar">
-      <i class="mdi-file-folder circle"></i>
+      <!--<i class="mdi-file-folder circle"></i>!-->
       <span class="title">{{fileName}} </span>
       <p>Split into {{chunkCount}} chunks</p>
            <a id="unregister" class="waves-effect waves-light btn red right">Unregister</a>
@@ -58,12 +58,15 @@
     </li>
 </template>
 <template name="FileDetails">
-    <div class="container-fluid" style="margin-bottom:20px;">
-        <h1><strong>{{fileName}} is split into {{chunkCount}} chunks.</strong></h1> {{#each chunks}} {{> peers}} {{/each}}
-    </div>
+ <strong>{{fileName}} is split into {{chunkCount}} chunks.</strong>
+     <ul class="collection">
+ {{#each chunks}} {{> peers}} {{/each}}
+</ul>
 </template>
 <template name="peers">
-    <li class="list-group-item">
+
+ <li class="collection-item">
+
         {{this}}
     </li>
 </template>
@@ -96,7 +99,7 @@
             <h2 class="center light-blue-text"><i class="mdi-image-flash-on"></i></h2>
             <h5 class="center">Rapid Data Transfers</h5>
 
-            <p class="light">Optimized simultaneous connectsons to peers enhances download speed.</p>
+            <p class="light">Optimized simultaneous connections to peers enhances download speed.</p>
           </div>
         </div>
 

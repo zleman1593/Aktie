@@ -5,14 +5,14 @@ var os = ::Meteor.npmRequire('os');
 
 var SERVER_DELAY = 500;//ms
 
-var backupTask = new ScheduledTask('at 12:01 am', fn () {
-    backupPartnerToSelf();
+var backupTask = new ::ScheduledTask('at 12:01 am', fn () {
+    ::backupPartnerToSelf();
   console.log("Backup was run.");
 });
 
-var heartbeatCheck = new ScheduledTask('every 30 sec', fn () {
+var heartbeatCheck = new ::ScheduledTask('every 30 sec', fn () {
 
-if PartnerIndex.status().connected {
+if ::PartnerIndex.status().connected {
   console.log("Partner is healthy!");
 } else{
       console.log("Partner is DOWN!");
@@ -30,10 +30,10 @@ var PartnerIndex;
         ::getOwnIPAndPort();
         //Connect to partner and maintin heartbeat
         var partnerAddress = "http://IndexNode.meteor.com";
-         PartnerIndex = ::DDP.connect(host);
+         ::PartnerIndex = ::DDP.connect(partnerAddress);
 
         var status = ::Async.runSync(fn(done) {
-            setTimeout(fn(){ done(null,server.status());},SERVER_DELAY);//enough time to allow connection
+            setTimeout(fn(){ done(null,::PartnerIndex.status());},SERVER_DELAY);//enough time to allow connection
         });
 
         if status.result.connected {
@@ -52,12 +52,45 @@ var PartnerIndex;
         var file = ::Files.findOne({
             "fileName": fileName.fileName
         });
+        if !file?{
+                 throw new ::Meteor.Error(240, "Error 320: Could Not find file", "A file by this name has not been registered.");
+            }
 
         console.log(JSON.stringify(file));
-        //Grab file part from one of the peers that has it.
+
+        var dictOfPeersUsedSoFar = {};
+
+        //Grab file part from one of the peers that has it. Even distribution of chunks to avalible peers.
         var chunks = file.chunks.map(fn(currentValue, index, array) {
-            return currentValue[Math.floor((Math.random() * currentValue.length))];
+
+                var bestPeerToUse;//
+                var bestPeerToUseIndex;
+                var bestPeerToUseCount = Number.MAX_VALUE;
+
+                 for var i = 0; i < currentValue.length; i++ {
+
+                    var machineName = "\(currentValue[i])";
+                    var machineCount = dictOfPeersUsedSoFar[machineName];
+                   
+                       if !machineCount? {
+                            //If peer hasn't been used for this transfer at all yet, use it.
+                            dictOfPeersUsedSoFar[machineName] = 1;
+                            return currentValue[i];
+                       } else if machineCount < bestPeerToUseCount{
+                            //If this peer is being used less than  other peers looked at so far.
+                            bestPeerToUse =  machineName;
+                            bestPeerToUseCount = machineCount;
+                            bestPeerToUseIndex = i;
+                       }
+                 }
+            
+            //update the dictionary with the peer that was used for this chunk
+            dictOfPeersUsedSoFar[bestPeerToUse] += 1;
+            //Use optimal peer for this chunk
+            return currentValue[bestPeerToUseIndex];
         });
+
+
         chunks = chunks.map(fn(currentValue, index, array) {
             return {
                 "chunkNumber": index,
@@ -129,6 +162,10 @@ var PartnerIndex;
                     //Don't allow duplicate entries
                     if   !::_.contains(file.chunks[i],hostNameWithPort) {
                     file.chunks[i].push(hostNameWithPort);
+
+                     } else{
+                        throw new::Meteor.Error(240, 'Error 240: Already registered', 'A file by this name has not been registered.');
+                          return;
                      }
                 }
                 ::Files.update(file._id,file);
@@ -145,7 +182,7 @@ var PartnerIndex;
         file.chunks[chunkNumber].push(hostNameWithPort);     
          ::Files.update(file._id,file);
         } else{
-              throw new::Meteor.Error(500, 'Error 500: Not registered', 'A file by this name has not been registered.');
+              throw new::Meteor.Error(240, 'Error 240: Already registered', 'A file by this name has not been registered.');
         }
     },
 
@@ -172,18 +209,32 @@ var PartnerIndex;
 
 fn backupPartnerToSelf(){
     //Remove old Backup
-    BackupForPartner.remove({});
+    ::BackupForPartner.remove({});
     //Create new backup
-    PartnerIndex.subscribe("allFiles");
+    ::PartnerIndex.subscribe("allFiles");
 
-    AllFilesToBeBackedUp = new Mongo.Collection('toBackup', {connection: PartnerIndex});
+    var AllFilesToBeBackedUp = new ::Mongo.Collection('toBackup', {connection: ::PartnerIndex});
 
     var cursor = AllFilesToBeBackedUp.find();
 
      cursor.forEach(fn(doc){
          ::BackupForPartner.insert(doc);
     });
+ }
 
+
+fn restoreSelfFromPartner(){
+   
+    ::PartnerIndex.subscribe("allBackupFiles");
+
+    var AllBackedUpFiles = new ::Mongo.Collection('theBackup', {connection: ::PartnerIndex});
+
+    var cursor = AllBackedUpFiles.find();
+
+     cursor.forEach(fn(doc){
+         ::Files.insert(doc);
+    });
+    //PartnerIndex.unsubscribe("allBackupFiles");
    
 }
 

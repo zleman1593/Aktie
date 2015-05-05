@@ -53,6 +53,7 @@ Template.file.events({
     'click #unregister': function(event) {
         event.preventDefault();
             Files.remove({ _id: this._id });
+        Materialize.toast("Unregistered File");
     },
 
 
