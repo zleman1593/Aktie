@@ -1,3 +1,5 @@
+##Allows for navigation in GUI
+
 Router.configure
   layoutTemplate: 'main'
 

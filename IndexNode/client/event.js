@@ -20,8 +20,6 @@ Template.displayFiles.events({
     'click #action': function(event) {
         event.preventDefault();
 
-
-
     },
 
 

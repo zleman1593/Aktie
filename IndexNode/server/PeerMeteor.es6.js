@@ -70,7 +70,6 @@
                     "chunk": currentValue
                 };
             });
-            console.log(JSON.stringify(chunks));
             return {
                 "fileName": fileName.fileName,
                 "chunks": chunks
@@ -85,7 +84,21 @@
                 "chunkNumber": info.chunkNumber,
                 "chunk": chunkLocations[Math.floor(Math.random() * chunkLocations.length)]
             };
-            console.log(JSON.stringify(chunk));
+            let downHost = info.badMachine;
+            Meteor.defer(function () {
+                let cleanedChunks = file.chunks.map(function (currentValue, index, array) {
+                    let clean = currentValue.filter(function (host) {
+                        return host !== downHost;
+                    });
+                    return clean;
+                });
+                file.chunks = cleanedChunks;
+                if (cleanedChunks.length !== 0) {
+                    Files.update(file._id, file);
+                } else {
+                    Files.remove(file._id);
+                }
+            });
             return {
                 "fileName": info.fileName,
                 "chunk": chunk
@@ -130,8 +143,8 @@
     function getOwnIPAndPort() {
         let interfaces = os.networkInterfaces();
         let addresses = [];
-        for (let k in interfaces) {
-            for (let k2 in interfaces[k]) {
+        for (let k of interfaces) {
+            for (let k2 of interfaces[k]) {
                 let address = interfaces[k][k2];
                 if (!!(address.family === "IPv4") && !address.internal) {
                     addresses.push(address.address);

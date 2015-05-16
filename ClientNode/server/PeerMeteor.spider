@@ -1,3 +1,6 @@
+//If you are reading this then this is not the final version of the code and was sent in error.
+
+//Load external libraries
 use :node;
 
 var randomAccessFile = ::Meteor.npmRequire('random-access-file');
@@ -10,15 +13,17 @@ var os = ::Meteor.npmRequire('os');
 var chunks = [];
 var missingChunks = [];
 //Time given to allow for connection before verifying connection status
-var SERVER_DELAY = 500; //ms
+var SERVER_DELAY = 1500; //ms
+var numberOfParts = 0;
 
 
-var writeLocation = '../web.browser/app/';
+var writeLocation = '/home/zleman/'; //var writeLocation = '../web.browser/app/';
+
 var readLocation = writeLocation;
 //Initial Index Nodes that this version of the software ships with
-var currentIndexNodes = ["52.6.251.108:9999", "http://IndexNode.meteor.com","http://IndexNode2.meteor.com","http://IndexNode3.meteor.com"];
+var currentIndexNodes = ["http://IndexNode0.meteor.com", "http://IndexNode.meteor.com","http://IndexNode2.meteor.com","http://IndexNode3.meteor.com"];
 var ONE_MIB = 1048576; // 1 MiB
-var CHUNK_SIZE = ONE_MIB * 5;
+var CHUNK_SIZE = ONE_MIB * 10;
 var IndexNode;
 var distributeIO = true;
 var transferComplete = true;
@@ -29,6 +34,7 @@ var openFD = null;
     ::getOwnIPAndPort();
 });
 
+var startTime;
 
 ::Meteor.methods({
     
@@ -51,7 +57,7 @@ getShareableFiles: fn() {
 
 getPercent: fn() {
     this.unblock;
-  return ( 61 / chunks.length ) * 100;
+  return (  chunks.length /  numberOfParts) * 100;
     
 },
     
@@ -73,6 +79,8 @@ download: fn(file) {
         } else {
             console.log("Obtained File Location Information");
             transferComplete = false;
+               startTime = new Date();
+
             ::initPeerFileTransfer(result, fileName);
             //::IndexNode.disconnect();
         }
@@ -102,20 +110,20 @@ fn findIndexNode(fileName) {
 
 
 fn getOwnIPAndPort() {
-    var interfaces = os.networkInterfaces();
-    var addresses = [];
-    for k in interfaces {
-        for k2 in interfaces[k] {
-            var address = interfaces[k][k2];
-            if address.family == 'IPv4' && !address.internal {
-                addresses.push(address.address);
+    // var interfaces = os.networkInterfaces();
+    // var addresses = [];
+    // for k in interfaces {
+    //     for k2 in interfaces[k] {
+    //         var address = interfaces[k][k2];
+    //         if address.family == 'IPv4' && !address.internal {
+    //             addresses.push(address.address);
                 
-            }
-        }
-    }
+    //         }
+    //     }
+    // }
     
-    console.log("\(addresses[0]):\(process.env.PORT)");
-    return "\(addresses[0]):\(process.env.PORT)";
+    console.log("\(process.env.IP):\(process.env.PORT)");
+    return "\(process.env.IP ):\(process.env.PORT)";
     
 }
 
@@ -123,7 +131,7 @@ fn getOwnIPAndPort() {
 /*When a client node wants to indicate to the network that it is avalible to share a file*/
 fn registerFiletoShare(fileName) {
     var filepath = '\(readLocation)\(fileName)';
-    var numberOfParts = ::splitFileCount(filepath);
+    numberOfParts = ::splitFileCount(filepath);
     if numberOfParts.error? {
         return numberOfParts.error;
     }
@@ -238,6 +246,7 @@ fn resetForNextFileTransferIfFileWasConcatedInMemory(fileName) {
     missingChunks = [];
     //Now that the client node hat the whole file, it should share it with other peers
     registerFiletoShare(fileName);
+    numberOfParts = 0;
 }
 
 fn resetForNextFileTransferIfFileWasConcatedOnDisk() {
@@ -246,6 +255,7 @@ fn resetForNextFileTransferIfFileWasConcatedOnDisk() {
     missingChunks = [];
     openFileName = null;
     openFD = null;
+    numberOfParts = 0;
 }
 
 
@@ -253,7 +263,7 @@ fn resetForNextFileTransferIfFileWasConcatedOnDisk() {
 /*Get all chunks from avalible peers*/
 fn initPeerFileTransfer(chunkHolder, fileName) {
     console.log("Start Calling Peers for file transfer");
-    var numberOfParts = chunkHolder.chunks.length;
+     numberOfParts = chunkHolder.chunks.length;
     //Todo; Sort chunks by peer. Start transfers from that peer with one open connection. The start others
     for var chunk = 0; chunk < chunkHolder.chunks.length; chunk++{
         var host = chunkHolder.chunks[chunk].chunk;
@@ -264,15 +274,19 @@ fn initPeerFileTransfer(chunkHolder, fileName) {
     //Collect all the missinhg parts
     //Only allows for one more attempt for a fiel chunk if first fails. Need to make more robust
     var timer = ::setInterval(::Meteor.bindEnvironment(fn() {
-        console.log("CheckingSum");
+           var end = new Date();
+                        var diff = end - startTime;
+                        console.log(diff);
+        console.log("Have all initial attemps to get chunks been made?");
         if missingChunks.length + chunks.length == numberOfParts  {
             ::clearTimeout(::timer);
-            while missingChunks.length == 0 {
-                ::getChunk(0, fileName, missingChunks.pop(), numberOfParts,false);
+            while missingChunks.length != 0 {
+                    var retry =  missingChunks.pop();
+                    ::getChunk(retry.chunkNumber, fileName,retry.chunk, numberOfParts, false);
             }
             
         } else {
-            console.log("Not there yet:" + missingChunks.length + chunks.length);
+            console.log("Not yet. Currently we have only tried to get " + (missingChunks.length + chunks.length) + "chunks.");
             //While timer was not executing the file was finished. This will stop the timer
             if transferComplete {
                 ::clearTimeout(::timer);
@@ -323,6 +337,11 @@ fn getChunk(chunk, fileName,host,numberOfParts,firstTime) {
                 
                 if chunks.length == numberOfParts {
                     transferComplete = true;
+              
+                        var end = new Date();
+                        var diff = end - startTime;
+                        console.log(diff);
+
                     if !distributeIO {
                         var concatedFile = concatFile(chunks);
                         writeConcatedFile(concatedFile, fileName);
@@ -343,14 +362,15 @@ fn getChunk(chunk, fileName,host,numberOfParts,firstTime) {
         console.log("Connection to IndexNode: " + IndexNode.status());
         ::IndexNode.call("getReplacementChunk", {
             "fileName": fileName,
-            "chunkNumber": chunk
+            "chunkNumber": chunk,
+            "badMachine": host
         }, fn(error, result) {
             if error? {
                 console.log("Error: Could not Obtain Replacement Chunk location From Index");
             } else {
                 console.log("Obtained Replacement Chunk File Location Information: \(JSON.stringify(result.chunk))");
                 if firstTime {
-                    ::missingChunks.push(result.chunk.chunk);
+                    ::missingChunks.push(result.chunk);
                 }
                 
             }
@@ -474,4 +494,10 @@ fn hash(fileName){
     var bucket = (sum % 4 );
     
     return bucket;
+}
+
+fn getPercent() {
+    this.unblock;
+  return (  chunks.length /  numberOfParts) * 100;
+    
 }

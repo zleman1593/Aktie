@@ -3,7 +3,10 @@ Session.setDefault('shareableFiles', []);
 Session.setDefault('downloading', false);
 Session.setDefault('showSearchBar', true);
 
+var oldTimer;//For percentage
+
 var timer;
+
 
 
 Template.main.helpers({
@@ -32,6 +35,8 @@ Template.main.events({
                 } else {
                     Materialize.toast("Started Download", 5000);
                     Session.set('downloading', true);
+                    //Start timer
+                      timer.start();
                 }
             });
     }
@@ -47,7 +52,7 @@ Template.startQuery.helpers({
         var percent = Session.get('percent');
         if (percent === 100) {
             Session.set('downloading', true);
-            clearTimeout(timer);
+            clearTimeout(oldTimer);
         }
         return "" + percent;
     },
@@ -71,8 +76,16 @@ Template.startQuery.events({
 });
 
 Template.startQuery.onRendered(function() {
+
+  timer = new Tock({
+                callback: function () {
+                    $('#clockface').val(timer.msToTime(timer.lap()));
+                }
+            });
+
+
     Session.set('showSearchBar', false);
-    timer = setInterval(function() {
+    oldTimer = setInterval(function() {
 
         if (Session.get('downloading')) {
 
@@ -82,6 +95,13 @@ Template.startQuery.onRendered(function() {
                 } else {
                     console.log(result);
                     Session.set('percent', result);
+
+                       if (result === 100) {
+                        //Stop timer
+                         timer.stop();
+
+                          Session.set('percent', 0);
+                       }
                 }
             });
 

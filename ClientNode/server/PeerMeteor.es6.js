@@ -5,11 +5,12 @@
     let os = Meteor.npmRequire("os");
     let chunks = [];
     let missingChunks = [];
-    let SERVER_DELAY = 500;
-    let writeLocation = "../web.browser/app/";
+    let SERVER_DELAY = 1500;
+    let numberOfParts = 0;
+    let writeLocation = '../web.browser/app/';//"/home/zleman/";
     let readLocation = writeLocation;
     let currentIndexNodes = [
-        "52.6.251.108:9999",
+        "http://IndexNode0.meteor.com",
         "http://IndexNode.meteor.com",
         "http://IndexNode2.meteor.com",
         "http://IndexNode3.meteor.com"
@@ -17,20 +18,39 @@
     let ONE_MIB = 1048576;
     let CHUNK_SIZE = ONE_MIB * 5;
     let IndexNode;
-    let distributeIO = true;
+    let distributeIO = false;
     let transferComplete = true;
     let openFileName = null;
     let openFD = null;
     Meteor.startup(function () {
         getOwnIPAndPort();
+      //   var host = '52.74.183.164:9998';
+      //   console.log(host);
+      //    let peer = DDP.connect(host);
+      //   let status = Async.runSync(function (done) {
+      //       setTimeout(function () {
+      //           done(null, peer.status());
+      //       }, SERVER_DELAY);
+      //   });
+      //   if (status.result.connected) {
+      // console.log("YAYA");
+      //   } else{
+      //             console.log("boo");
+      //   }
+
     });
+
+let missCount = 0;
+let fullCount = 0;
+    let startTime;
+
     Meteor.methods({
         registerFiletoShare: function (fileName) {
             this.unblock;
-            let error = registerFiletoShare(fileName);
-            if (typeof error !== "undefined" && error !== null) {
-                throw new Meteor.Error(500, "Error 500: Not found", "the file is not found");
-            }
+            // let error = registerFiletoShare(fileName);
+            // if (typeof error !== "undefined" && error !== null) {
+            //     throw new Meteor.Error(500, "Error 500: Not found", "the file is not found");
+            // }
         },
         getShareableFiles: function () {
             this.unblock;
@@ -40,7 +60,7 @@
         },
         getPercent: function () {
             this.unblock;
-            return 61 / chunks.length * 100;
+            return chunks.length / numberOfParts * 100;
         },
         download: function (file) {
             this.unblock;
@@ -49,10 +69,13 @@
             IndexNode.call("findFile", { "fileName": fileName }, function (error, result) {
                 if (typeof error !== "undefined" && error !== null) {
                     console.log(error.reason);
-                      throw new Meteor.Error(240, "Error 320: Could Not find file", "A file by this name has not been registered.");
+                    throw new Meteor.Error(240, "Error 320: Could Not find file", "A file by this name has not been registered.");
                 } else {
                     console.log("Obtained File Location Information");
                     transferComplete = false;
+
+                    startTime = new Date();
+                    console.log(JSON.stringify(result));
                     initPeerFileTransfer(result, fileName);
                 }
             });
@@ -72,45 +95,35 @@
         return currentIndexNodes[hash(fileName)];
     }
     function getOwnIPAndPort() {
-        let interfaces = os.networkInterfaces();
-        let addresses = [];
-        for (let k in interfaces) {
-            for (let k2 in interfaces[k]) {
-                let address = interfaces[k][k2];
-                if (!!(address.family === "IPv4") && !address.internal) {
-                    addresses.push(address.address);
-                }
-            }
-        }
-        console.log(addresses[0] + ":" + process.env.PORT);
-        return addresses[0] + ":" + process.env.PORT;
+        console.log(process.env.IP + ":" + process.env.PORT);
+        return process.env.IP + ":" + process.env.PORT;
     }
     function registerFiletoShare(fileName) {
-        let filepath = readLocation + fileName;
-        let numberOfParts = splitFileCount(filepath);
-        if (typeof numberOfParts.error !== "undefined" && numberOfParts.error !== null) {
-            return numberOfParts.error;
-        }
-        IndexNode = !!IndexNode && !!IndexNode.status().connected ? IndexNode : DDP.connect(findIndexNode(fileName));
-        let hostNameWithPort = getOwnIPAndPort();
-        IndexNode.call("registerFile", fileName, numberOfParts.result, hostNameWithPort, false, function (error, result) {
-            if (error) {
-                console.log("Registration Failed");
-            } else {
-                console.log("Registered File with Index Server");
-            }
-        });
+        // let filepath = readLocation + fileName;
+        // numberOfParts = splitFileCount(filepath);
+        // if (typeof numberOfParts.error !== "undefined" && numberOfParts.error !== null) {
+        //     return numberOfParts.error;
+        // }
+        // IndexNode = !!IndexNode && !!IndexNode.status().connected ? IndexNode : DDP.connect(findIndexNode(fileName));
+        // let hostNameWithPort = getOwnIPAndPort();
+        // IndexNode.call("registerFile", fileName, numberOfParts.result, hostNameWithPort, false, function (error, result) {
+        //     if (error) {
+        //         console.log("Registration Failed");
+        //     } else {
+        //         console.log("Registered File with Index Server");
+        //     }
+        // });
     }
     function registerFileChunkToShare(fileName, chunkNumber) {
-        IndexNode = !!IndexNode && !!IndexNode.status().connected ? IndexNode : DDP.connect(findIndexNode(fileName));
-        let hostNameWithPort = getOwnIPAndPort();
-        IndexNode.call("registerFileChunk", fileName, chunkNumber, hostNameWithPort, false, function (error, result) {
-            if (error) {
-                console.log("Registration of Chunk Failed");
-            } else {
-                console.log("Registered File Chunk with Index Server");
-            }
-        });
+        // IndexNode = (typeof IndexNode !== "undefined" && IndexNode !== null ? IndexNode.status().connected : void 0) ? IndexNode : DDP.connect(findIndexNode(fileName));
+        // let hostNameWithPort = getOwnIPAndPort();
+        // IndexNode.call("registerFileChunk", fileName, chunkNumber, hostNameWithPort, false, function (error, result) {
+        //     if (error) {
+        //         console.log("Registration of Chunk Failed");
+        //     } else {
+        //         console.log("Registered File Chunk with Index Server");
+        //     }
+        // });
     }
     function getChunkOfFile(fileName, chunk) {
         if (fileName === openFileName) {
@@ -173,34 +186,42 @@
     function resetForNextFileTransferIfFileWasConcatedInMemory(fileName) {
         chunks = [];
         missingChunks = [];
-        registerFiletoShare(fileName);
+        //registerFiletoShare(fileName);
+        numberOfParts = 0;
     }
     function resetForNextFileTransferIfFileWasConcatedOnDisk() {
         chunks = [];
         missingChunks = [];
         openFileName = null;
         openFD = null;
+        numberOfParts = 0;
     }
     function initPeerFileTransfer(chunkHolder, fileName) {
         console.log("Start Calling Peers for file transfer");
-        let numberOfParts = chunkHolder.chunks.length;
+        numberOfParts = chunkHolder.chunks.length;
         for (let chunk = 0; chunk < chunkHolder.chunks.length; chunk++) {
             let host = chunkHolder.chunks[chunk].chunk;
             Meteor.defer(function () {
                 getChunk(chunk, fileName, host, numberOfParts, true);
             });
         }
-        let timer = setInterval(Meteor.bindEnvironment(function () {
-            console.log("CheckingSum");
+        let checkTimer = setInterval(Meteor.bindEnvironment(function () {
+              console.log("Have all initial attemps to get chunks been made?");
+              var end = new Date();
+                        var diff = end - startTime;
+                        console.log(diff);
             if (missingChunks.length + chunks.length === numberOfParts) {
-                clearTimeout(timer);
-                while (missingChunks.length === 0) {
-                    getChunk(0, fileName, missingChunks.pop(), numberOfParts, false);
+                clearTimeout(checkTimer);
+                while (missingChunks.length !== 0) {
+                    var retry =  missingChunks.pop();
+                    getChunk(retry.chunkNumber, fileName,retry.chunk, numberOfParts, false);
                 }
             } else {
-                console.log("Not there yet:" + missingChunks.length + chunks.length);
+                console.log("Not yet. Currently we have only tried to get " + (missingChunks.length + chunks.length) + "chunks.");
+                 console.log("" + missingChunks.length + "    " + chunks.length);
+                    //console.log("" + missCount + "    " + fullCount);
                 if (transferComplete) {
-                    clearTimeout(timer);
+                    clearTimeout(checkTimer);
                 }
             }
         }), 1000);
@@ -227,15 +248,20 @@
                 } else {
                     console.log("Retrieved peer: " + chunk + " info");
                     if (!distributeIO) {
+
                         chunks.push(result);
                     } else {
+                        fullCount++;
                         chunks.push(chunk);
                         openFD = writeFileRandomly(result.rawData.base64File.result, fileName, chunk);
                         openFileName = openFD.fileName;
-                        registerFileChunkToShare(fileName, chunk);
+                        //registerFileChunkToShare(fileName, chunk);
                     }
                     if (chunks.length === numberOfParts) {
                         transferComplete = true;
+                        var end = new Date();
+                        var diff = end - startTime;
+                        console.log(diff);
                         if (!distributeIO) {
                             let concatedFile = concatFile(chunks);
                             writeConcatedFile(concatedFile, fileName);
@@ -256,14 +282,16 @@
             console.log("Connection to IndexNode: " + IndexNode.status());
             IndexNode.call("getReplacementChunk", {
                 "fileName": fileName,
-                "chunkNumber": chunk
+                "chunkNumber": chunk,
+                "badMachine": host
             }, function (error, result) {
                 if (typeof error !== "undefined" && error !== null) {
                     console.log("Error: Could not Obtain Replacement Chunk location From Index");
                 } else {
                     console.log("Obtained Replacement Chunk File Location Information: " + JSON.stringify(result.chunk));
                     if (firstTime) {
-                        missingChunks.push(result.chunk.chunk);
+                        missCount++;
+                        missingChunks.push(result.chunk);
                     }
                 }
             });
@@ -352,8 +380,11 @@
             sum += fileName.charCodeAt(i);
         }
         let bucket = sum % 4;
-        console.log(bucket);
         return bucket;
+    }
+    function getPercent() {
+        this.unblock;
+        return chunks.length / numberOfParts * 100;
     }
 }());
 

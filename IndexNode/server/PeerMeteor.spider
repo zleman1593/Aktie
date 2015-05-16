@@ -1,10 +1,15 @@
-use :node;
+//If you are reading this then this is not the final version of the code and was sent in error.
 
+
+//Load external Libraries
+use :node;
 var fs = ::Meteor.npmRequire('fs');
 var os = ::Meteor.npmRequire('os');
 
-var SERVER_DELAY = 500;//ms
+//Timeout on connection
+var SERVER_DELAY = 1500;//ms
 
+//Backup Partner Index to Self at 12:01 AM everyday
 var backupTask = new ::ScheduledTask('at 12:01 am', fn () {
     ::backupPartnerToSelf();
   console.log("Backup was run.");
@@ -12,26 +17,29 @@ var backupTask = new ::ScheduledTask('at 12:01 am', fn () {
 
 var heartbeatCheck = new ::ScheduledTask('every 30 sec', fn () {
 
-if ::PartnerIndex.status().connected {
-  console.log("Partner is healthy!");
-} else{
-      console.log("Partner is DOWN!");
-        console.log("Spawning replacement!");
-        console.log("Restoring replacement!");
-}
+        if ::PartnerIndex.status().connected {
+          console.log("Partner is healthy!");
+        } else{
+              console.log("Partner is DOWN!");
+                console.log("Spawning replacement!");
+                console.log("Restoring replacement!");
+        }
 });
 
 var PartnerIndex;
 
+//When the Index Node Starts
 ::Meteor.startup(fn() {
         //Init backup schedule
         backupTask.start();
-        //Report own Address
+        //Report own Address to standard out
         ::getOwnIPAndPort();
         //Connect to partner and maintin heartbeat
+        //For testing purposes this is another Index Node
         var partnerAddress = "http://IndexNode.meteor.com";
          ::PartnerIndex = ::DDP.connect(partnerAddress);
 
+         //Did it connect to its partner
         var status = ::Async.runSync(fn(done) {
             setTimeout(fn(){ done(null,::PartnerIndex.status());},SERVER_DELAY);//enough time to allow connection
         });
@@ -43,18 +51,23 @@ var PartnerIndex;
         }
 });
 
-
+//API that other Index Nodes and client nodes use to call methods on Index Nodes
 ::Meteor.methods({
+    //Client nodes call this  to get the file chunk location info
     findFile: fn(fileName) {
-         this.unblock;
+        //Allow other DDP messages to be processed at the same time
+        this.unblock;
+
         console.log("Finding the File Part Locations for: \(fileName.fileName)" );
 
         var file = ::Files.findOne({
             "fileName": fileName.fileName
         });
+
+
         if !file?{
                  throw new ::Meteor.Error(240, "Error 320: Could Not find file", "A file by this name has not been registered.");
-            }
+        }
 
         console.log(JSON.stringify(file));
 
@@ -63,7 +76,7 @@ var PartnerIndex;
         //Grab file part from one of the peers that has it. Even distribution of chunks to avalible peers.
         var chunks = file.chunks.map(fn(currentValue, index, array) {
 
-                var bestPeerToUse;//
+                var bestPeerToUse;
                 var bestPeerToUseIndex;
                 var bestPeerToUseCount = Number.MAX_VALUE;
 
@@ -77,7 +90,7 @@ var PartnerIndex;
                             dictOfPeersUsedSoFar[machineName] = 1;
                             return currentValue[i];
                        } else if machineCount < bestPeerToUseCount{
-                            //If this peer is being used less than  other peers looked at so far.
+                            //If this peer is being used less than other peers looked at so far.
                             bestPeerToUse =  machineName;
                             bestPeerToUseCount = machineCount;
                             bestPeerToUseIndex = i;
@@ -98,18 +111,17 @@ var PartnerIndex;
             };
         });
 
-        console.log(JSON.stringify(chunks));
 
         return {
             "fileName": fileName.fileName,
             "chunks": chunks
         };
     },
-
-        getReplacementChunk: fn(info) {
+    //Client Node Calls this with the chunk it can't obtain and the offline peer
+    getReplacementChunk: fn(info) {
          this.unblock;
         console.log("Finding the New File Part Location for: \(info.fileName): Chunk \(info.chunkNumber)" );
-
+        //Get the file metadata object
         var file = ::Files.findOne({
             "fileName": info.fileName
         });
@@ -119,25 +131,46 @@ var PartnerIndex;
 
 
         var chunk = { "chunkNumber": info.chunkNumber,
-                 "chunk": chunkLocations[Math.floor((Math.random() * chunkLocations.length))]
-            };
-   
+                      "chunk": chunkLocations[Math.floor((Math.random() * chunkLocations.length))]
+        };
 
-        console.log(JSON.stringify(chunk));
 
+        var downHost = info.badMachine;
+
+        ::Meteor.defer(fn(){
+
+            //remove downHost from file meta data
+            var cleanedChunks = file.chunks.map(fn(currentValue, index, array) {
+
+                 var clean = currentValue.filter(fn(host) { return host != downHost ; });
+
+                 return  clean;
+
+        });
+
+        file.chunks = cleanedChunks;
+
+        //Remove file if no avalible peers
+        if cleanedChunks.length != 0 {
+                ::Files.update(file._id,file);
+
+          } else {
+                ::Files.remove(file._id);
+             }
+
+            });
+
+        //Return the replacement information
         return {
             "fileName": info.fileName,
             "chunk": chunk
         };
-    },
+},
 
 
-    registerFile: fn(fileName, numberOfParts, hostNameWithPort,updateFromIndexNode) {
-         this.unblock;
-         // if !updateFromIndexNode {
-         //     ::IndexNode.call('registerFile', fileName, numberOfParts.result, hostNameWithPort,true);        }
-         // }
-
+    registerFile: fn(fileName, numberOfParts, hostNameWithPort) {
+        this.unblock;
+ 
         var file = ::Files.findOne({
             "fileName": fileName
         });
@@ -148,31 +181,32 @@ var PartnerIndex;
                 "fileName": fileName,
                 "chunks": []
             };
-             console.log("registering new File with \(numberOfParts) parts");
+
+            console.log("registering new File with \(numberOfParts) parts");
 
             for var i = 0; i < numberOfParts; i++ {
                 fileToInsert.chunks.push([hostNameWithPort]);
             }
 
             ::Files.insert(fileToInsert);
+
         } else {
             //else add  to the file meta data that a new client has this file avalible
-
                 for var i = 0; i <  file.chunks.length; i++ {
                     //Don't allow duplicate entries
                     if   !::_.contains(file.chunks[i],hostNameWithPort) {
-                    file.chunks[i].push(hostNameWithPort);
-
-                     } else{
-                        throw new::Meteor.Error(240, 'Error 240: Already registered', 'A file by this name has not been registered.');
-                          return;
-                     }
+                            file.chunks[i].push(hostNameWithPort);
+                    } else {
+                           throw new::Meteor.Error(240, 'Error 240: Already registered', 'A file by this name has already been registered.');
+                           return;
+                    }
                 }
+
                 ::Files.update(file._id,file);
         }
     },
-
-     registerFileChunk: fn(fileName, chunkNumber, hostNameWithPort,updateFromIndexNode) {
+        //Regster that a client node can now share a chunk
+     registerFileChunk: fn(fileName, chunkNumber, hostNameWithPort) {
         console.log("fileName: \(fileName). chunkNumber: \(chunkNumber)");
         //this.unblock;
         var file = ::Files.findOne({
@@ -182,7 +216,7 @@ var PartnerIndex;
         file.chunks[chunkNumber].push(hostNameWithPort);     
          ::Files.update(file._id,file);
         } else{
-              throw new::Meteor.Error(240, 'Error 240: Already registered', 'A file by this name has not been registered.');
+              throw new::Meteor.Error(240, 'Error 240: Already registered', 'A file by this name has already been registered.');
         }
     },
 
@@ -206,6 +240,7 @@ var PartnerIndex;
     return "\(addresses[0]):\(process.env.PORT)";
 
   } 
+
 
 fn backupPartnerToSelf(){
     //Remove old Backup
@@ -234,8 +269,8 @@ fn restoreSelfFromPartner(){
      cursor.forEach(fn(doc){
          ::Files.insert(doc);
     });
+
     //PartnerIndex.unsubscribe("allBackupFiles");
-   
 }
 
 
