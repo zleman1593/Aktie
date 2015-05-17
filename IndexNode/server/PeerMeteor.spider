@@ -1,4 +1,3 @@
-//If you are reading this then this is not the final version of the code and was sent in error.
 
 
 //Load external Libraries
@@ -12,32 +11,51 @@ var SERVER_DELAY = 1500;//ms
 //Backup Partner Index to Self at 12:01 AM everyday
 var backupTask = new ::ScheduledTask('at 12:01 am', fn () {
     ::backupPartnerToSelf();
-  console.log("Backup was run.");
+    console.log("Backup was run.");
 });
 
 var heartbeatCheck = new ::ScheduledTask('every 30 sec', fn () {
 
         if ::PartnerIndex.status().connected {
-          console.log("Partner is healthy!");
+            console.log("Partner is healthy!");
         } else{
-              console.log("Partner is DOWN!");
-                console.log("Spawning replacement!");
-                console.log("Restoring replacement!");
+            console.log("Partner is DOWN!");
+            console.log("Spawning replacement!");
+            //Testing code removed as this part depended on where the code is being run. 
+            //Spawning new instaces is a bit complicated and different locally vs on some servers
+            //Currently disabled restoration feature. This allows other features to work normally.  
+            // Here a new instacne would be created and a ref to the new parter would be stored in PartnerIndex
+
+            //Now it has new partner freshly created
+            ::PartnerIndex.call('restoreMyself', getOwnIPAndPort, fn(error, result) {
+                if error? {
+                    console.log(error.reason);
+                           throw new ::Meteor.Error(600, "Error 600: Could Not restore partner", "Partner could not be restored.");
+                } else {
+                    console.log("Partner is starting to be restored");
+                }
+            });
+            
+
+            console.log("Restoring replacement!");
         }
 });
 
+//Keeps track of the partner Index Node
 var PartnerIndex;
 
 //When the Index Node Starts
 ::Meteor.startup(fn() {
         //Init backup schedule
         backupTask.start();
+
+        heartbeatCheck.start();
         //Report own Address to standard out
         ::getOwnIPAndPort();
-        //Connect to partner and maintin heartbeat
+        //Connect to partner and maintain heartbeat
         //For testing purposes this is another Index Node
         var partnerAddress = "http://IndexNode.meteor.com";
-         ::PartnerIndex = ::DDP.connect(partnerAddress);
+        ::PartnerIndex = ::DDP.connect(partnerAddress);
 
          //Did it connect to its partner
         var status = ::Async.runSync(fn(done) {
@@ -53,7 +71,7 @@ var PartnerIndex;
 
 //API that other Index Nodes and client nodes use to call methods on Index Nodes
 ::Meteor.methods({
-    //Client nodes call this  to get the file chunk location info
+    //Client nodes call this to get the file chunk location info
     findFile: fn(fileName) {
         //Allow other DDP messages to be processed at the same time
         this.unblock;
@@ -218,6 +236,28 @@ var PartnerIndex;
         } else{
               throw new::Meteor.Error(240, 'Error 240: Already registered', 'A file by this name has already been registered.');
         }
+    },
+
+
+    //Called by the partner of this new node replacement
+     restoreMyself: fn(partnerIP) {
+        this.unblock;
+        console.log("Setting ref to partner");
+
+        ::PartnerIndex = ::DDP.connect(partnerIP);
+
+         //Did it connect to its partner
+        var status = ::Async.runSync(fn(done) {
+            setTimeout(fn(){ done(null,::PartnerIndex.status());},SERVER_DELAY);//enough time to allow connection
+        });
+
+        if status.result.connected {
+             console.log("Connected to partner that is going to restore me");
+        } else{
+             console.log("Not Connected to partner that is going to restore me");
+        }
+        console.log("Restoring myself form Parner");
+        restoreSelfFromPartner();
     },
 
 });

@@ -6,11 +6,10 @@ Template.displayFiles.helpers({
     },
     anyFiles: function() {
         if (Files.find().count !== 0) {
-        return true;
+            return true;
+        }
+        return false;
     }
-    return false;
-}
-
 
 });
 
@@ -22,7 +21,6 @@ Template.displayFiles.events({
 
     },
 
-
 });
 
 
@@ -30,8 +28,6 @@ Template.file.helpers({
     chunkCount: function() {
         return this.chunks.length;
     },
-    
-
 
 });
 
@@ -39,8 +35,6 @@ Template.FileDetails.helpers({
     chunkCount: function() {
         return this.chunks.length;
     },
-    
-
 
 });
 
@@ -50,7 +44,9 @@ Template.file.events({
 
     'click #unregister': function(event) {
         event.preventDefault();
-            Files.remove({ _id: this._id });
+        Files.remove({
+            _id: this._id
+        });
         Materialize.toast("Unregistered File");
     },
 
@@ -66,4 +62,3 @@ Template.file.events({
 
 
 });*/
-
